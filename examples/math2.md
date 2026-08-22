@@ -1,0 +1,1 @@
+# SilkMark Math II\n\nInline vector: $\\vec{x}$, hat: $\\hat{y}$, bar: $\\bar{z}$.\n\n$$\n\\begin{matrix}\na & b \\\\n c & d\n\\end{matrix}\n$$\n\n$$\n\\begin{pmatrix}\n1 & 0 \\\\n0 & 1\n\\end{pmatrix}\n$$\n\n$$\n\\begin{bmatrix}\nx_1 & x_2 \\\\ny_1 & y_2\n\\end{bmatrix}\n$$\n\nUnderline: $\\underline{x+y}$ and overline: $\\overline{AB}$.\n

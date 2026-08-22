@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=SilkMark
+Comment=Fast lightweight native Markdown document browser
+Exec=silkmark %F
+Terminal=false
+Categories=Development;Documentation;Utility;
+MimeType=text/markdown;text/x-markdown;
+StartupNotify=true

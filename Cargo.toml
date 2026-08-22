@@ -1,0 +1,16 @@
+[package]
+name = "silkmark"
+version = "1.0.4"
+edition = "2024"
+description = "SilkMark: a lightweight GTK4-FFI Markdown browser with tabs, bookmarks, URL/local-file bar and HTTPS via system libcurl"
+license = "MIT"
+build = "build.rs"
+
+[dependencies]
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
