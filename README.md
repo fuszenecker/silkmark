@@ -437,7 +437,7 @@ Prebuilt `.deb` installers are published as GitHub Release assets (no zip) on ve
 tags. Download the latest from the GitHub Releases page, or directly:
 
 ```sh
-curl -LO https://github.com/<owner>/silkmark/releases/latest/download/silkmark.deb
+curl -LO https://github.com/hg2ecz/silkmark/releases/latest/download/silkmark.deb
 ```
 
 ## Security

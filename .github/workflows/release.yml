@@ -4,8 +4,8 @@ name: release
 # GitHub Release. Release assets are served as raw files — no zip — so each
 # .deb gets a permanent direct-download URL. A stable `silkmark.deb` copy is
 # also uploaded so the `latest` download URL always resolves:
-#   https://github.com/<owner>/silkmark/releases/download/<tag>/silkmark_<ver>_<arch>.deb
-#   https://github.com/<owner>/silkmark/releases/latest/download/silkmark.deb
+#   https://github.com/hg2ecz/silkmark/releases/download/<tag>/silkmark_<ver>_<arch>.deb
+#   https://github.com/hg2ecz/silkmark/releases/latest/download/silkmark.deb
 
 on:
   push:
