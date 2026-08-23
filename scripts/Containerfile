@@ -1,0 +1,22 @@
+# SilkMark Debian/.deb build environment.
+#
+# A Debian-based Rust toolchain image extended with the native development
+# libraries SilkMark links against (GTK4, gdk-pixbuf, libcurl) and the Debian
+# packaging tools (dpkg-dev / dpkg-shlibdeps) used to resolve the .deb's runtime
+# dependencies. scripts/build-installer.sh builds this image and runs the
+# package build inside it so the result does not depend on the host machine's
+# installed libraries.
+
+FROM docker.io/library/rust:1-slim-bookworm
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        gcc \
+        pkg-config \
+        dpkg-dev \
+        libgtk-4-dev \
+        libgdk-pixbuf-2.0-dev \
+        libcurl4-openssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /work
