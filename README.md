@@ -8,20 +8,6 @@ Example:
 silkmark --stats -v https://example.org/large-document.md
 ```
 
-## v0.37.0 highlights
-
-- Reader polish: more generous document margins and vertical rhythm.
-- Improved heading, quote, code, table and image spacing.
-- Theme selection: `--theme light|dark|system`.
-- `--system-theme` remains as a compatibility alias.
-- Default remains GTK4 Adwaita light; dark mode uses `Adwaita:dark`.
-
-
-- Math III: `cases`, limits and common named mathematical operators.
-- Improved `\left` / `\right` delimiter support, including invisible delimiters.
-- Continued lightweight LaTeX-like math rendering without MathJax, WebView, or crates.io dependencies.
-- See `examples/math3.md`.
-
 ## Design goals
 
 - zero crates.io dependencies
@@ -29,58 +15,6 @@ silkmark --stats -v https://example.org/large-document.md
 - system libcurl for HTTPS
 - no WebView, Chromium, JavaScript, HTML engine or async runtime
 - small, understandable browser state and Markdown renderer
-
-
-## v0.34.0 highlights
-
-- CommonMark-style reference links: `[text][id]`, `[id][]`, `[id]`
-- Reference-style images: `![alt][id]`
-- Case/whitespace-normalized reference labels
-- Better nested emphasis/strong/strikethrough parsing
-
-- Fixes Rust `dangerous_implicit_autorefs` build error in session restore.
-- Extends the lightweight LaTeX-like math renderer with `matrix`, `pmatrix`, and `bmatrix`.
-- Adds `\vec{}`, `\hat{}`, `\bar{}` / `\overline{}`, and `\underline{}`.
-- Keeps GitHub-style `$...$`, `$`...``$`, `$$...$$`, and fenced `math` syntax.
-- Still uses zero crates.io dependencies.
-
-
-## v0.28.0 highlights
-
-- real GTK grid rendering for Markdown pipe tables
-- GFM column alignment markers: `:---`, `:---:`, `---:`
-- wrapped table cells with sensible width caps
-- horizontal scrolling for wide tables
-- inline Markdown and links inside cells
-- table cells participate in document search
-
-## v0.24.1 highlights
-
-- Built-in LaTeX-like math rendering for `$...$` and `$$...$$` with no JavaScript/WebView.
-
-- Keyboard-first navigation with no new dependencies.
-- `Ctrl+PageUp` / `Ctrl+PageDown`: previous / next tab.
-- `Alt+1` ... `Alt+9`: jump directly to tab 1 ... 9.
-- `/`: open and focus in-document search.
-- `g g`: jump to the top of the current document.
-- `G`: jump to the bottom of the current document.
-- Existing mouse navigation, history, bookmarks, sessions, cache and local-file support are unchanged.
-
-
-## v0.21.0 highlights
-
-- Markdown backslash escapes for punctuation such as `\*`, `\[`, `\]`, `\(` and `\|`.
-- Raw HTML stays inert and is displayed as escaped text; SilkMark still has no HTML engine.
-- Lightweight pipe tables now pad cells for a more stable monospace column layout.
-- Nested ordered lists retain indentation, including mixtures of ordered, bullet and task items.
-- Local-file and HTTPS relative links continue to share the same navigation/history/bookmark behavior.
-
-## v0.21.0 highlights
-
-- Project renamed to **SilkMark**.
-- Added an English **About SilkMark** window with author and MIT license information.
-- Bookmarks now use the `silkmark` XDG data directory; the previous `md-browser-arachne` location is read as a migration fallback.
-
 
 ### Image cache, zoom and animated GIF
 
