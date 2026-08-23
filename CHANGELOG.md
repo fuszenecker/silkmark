@@ -1,3 +1,12 @@
+## 1.0.5
+
+- add explicit `--allow-http` opt-in for trusted LAN/intranet Markdown servers
+- keep HTTPS-only networking as the default
+- allow HTTP relative links, images, redirects and non-standard ports only while the opt-in is enabled
+- apply `--allow-host` to both HTTP and HTTPS hosts
+- recognize plain and angle-bracket HTTP autolinks in Markdown
+- keep ftp:, data:, javascript: and remote file authorities rejected
+
 ## 1.0.4
 
 - Fix duplicate `OnceLock` import in `src/net.rs` introduced by the 1.0.3 hardening pass.
