@@ -2,64 +2,11 @@
 
 A deliberately small GTK4-FFI Markdown browser written in Rust.
 
-## Current highlights
-
-- Completed the intentionally HTML-free CommonMark baseline with four-column indented code blocks, `)` ordered-list markers, and email autolinks.
-
-Safety & robustness audit before the next feature cycle:
-
-- Hardened GTK/libcurl callback pointer checks.
-- Shared atomic persistence for session, bookmarks and disk cache.
-- Malformed-input and large-document regression coverage.
-- Reduced avoidable parser panics while retaining zero crates.io dependencies.
-
-## v0.40.1 highlights
-
-- Expanded the built-in dependency-free fenced-code highlighter.
-- Added C#, Java, Kotlin, Go, Swift, Nim, JavaScript, TypeScript, SQL, Lua, Ruby, PHP, Dart, Scala, and Zig.
-- Added common fence aliases such as `cs`, `c#`, `kt`, `golang`, `js`, `jsx`, `ts`, `tsx`, and `rb`.
-- Highlighting remains intentionally lightweight and documentation-oriented.
-
-## v0.39.3 highlights
-
-- Uses Rust Edition 2024 without a fixed MSRV in Cargo.toml.
-- `rust-toolchain.toml` follows the stable Rust channel and includes rustfmt and clippy.
-- Updated Rust 2024 FFI/env safety requirements (`unsafe extern` blocks and unsafe environment mutation).
-- Centralized application version strings on `CARGO_PKG_VERSION`.
-
-- Added a curated CommonMark/GFM regression suite covering block, inline, link, table, footnote, code-fence, task-list, math, and nesting behavior.
-- Added `COMPATIBILITY.md`, documenting SilkMark's target profile: CommonMark + practical GFM + GitHub-style math.
-- Added `examples/regression-suite.md` as a visual smoke-test document.
-- Kept the suite self-contained: no network test dependency and no new crates.io dependencies.
-
-## v0.38.0 highlights
-
-- bounded image loading: at most 4 HTTPS image fetches run concurrently; remaining images are queued
-- queue cleanup when a tab/page is rebuilt or closed, preventing stale image work from accumulating
-- `--stats` reports Markdown parse and GTK render timings to stderr
-- parse statistics include source bytes, block/line count, link count and heading count
-- render statistics include block count and active/queued image work
-- existing 16-image / 32 MiB in-memory image cache remains bounded
-
 Example:
 
 ```sh
 silkmark --stats -v https://example.org/large-document.md
 ```
-
-## v0.37.0 highlights
-
-- Reader polish: more generous document margins and vertical rhythm.
-- Improved heading, quote, code, table and image spacing.
-- Theme selection: `--theme light|dark|system`.
-- `--system-theme` remains as a compatibility alias.
-- Default remains GTK4 Adwaita light; dark mode uses `Adwaita:dark`.
-
-
-- Math III: `cases`, limits and common named mathematical operators.
-- Improved `\left` / `\right` delimiter support, including invisible delimiters.
-- Continued lightweight LaTeX-like math rendering without MathJax, WebView, or crates.io dependencies.
-- See `examples/math3.md`.
 
 ## Design goals
 
@@ -68,58 +15,6 @@ silkmark --stats -v https://example.org/large-document.md
 - system libcurl for HTTPS
 - no WebView, Chromium, JavaScript, HTML engine or async runtime
 - small, understandable browser state and Markdown renderer
-
-
-## v0.34.0 highlights
-
-- CommonMark-style reference links: `[text][id]`, `[id][]`, `[id]`
-- Reference-style images: `![alt][id]`
-- Case/whitespace-normalized reference labels
-- Better nested emphasis/strong/strikethrough parsing
-
-- Fixes Rust `dangerous_implicit_autorefs` build error in session restore.
-- Extends the lightweight LaTeX-like math renderer with `matrix`, `pmatrix`, and `bmatrix`.
-- Adds `\vec{}`, `\hat{}`, `\bar{}` / `\overline{}`, and `\underline{}`.
-- Keeps GitHub-style `$...$`, `$`...``$`, `$$...$$`, and fenced `math` syntax.
-- Still uses zero crates.io dependencies.
-
-
-## v0.28.0 highlights
-
-- real GTK grid rendering for Markdown pipe tables
-- GFM column alignment markers: `:---`, `:---:`, `---:`
-- wrapped table cells with sensible width caps
-- horizontal scrolling for wide tables
-- inline Markdown and links inside cells
-- table cells participate in document search
-
-## v0.24.1 highlights
-
-- Built-in LaTeX-like math rendering for `$...$` and `$$...$$` with no JavaScript/WebView.
-
-- Keyboard-first navigation with no new dependencies.
-- `Ctrl+PageUp` / `Ctrl+PageDown`: previous / next tab.
-- `Alt+1` ... `Alt+9`: jump directly to tab 1 ... 9.
-- `/`: open and focus in-document search.
-- `g g`: jump to the top of the current document.
-- `G`: jump to the bottom of the current document.
-- Existing mouse navigation, history, bookmarks, sessions, cache and local-file support are unchanged.
-
-
-## v0.21.0 highlights
-
-- Markdown backslash escapes for punctuation such as `\*`, `\[`, `\]`, `\(` and `\|`.
-- Raw HTML stays inert and is displayed as escaped text; SilkMark still has no HTML engine.
-- Lightweight pipe tables now pad cells for a more stable monospace column layout.
-- Nested ordered lists retain indentation, including mixtures of ordered, bullet and task items.
-- Local-file and HTTPS relative links continue to share the same navigation/history/bookmark behavior.
-
-## v0.21.0 highlights
-
-- Project renamed to **SilkMark**.
-- Added an English **About SilkMark** window with author and MIT license information.
-- Bookmarks now use the `silkmark` XDG data directory; the previous `md-browser-arachne` location is read as a migration fallback.
-
 
 ### Image cache, zoom and animated GIF
 
