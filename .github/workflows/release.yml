@@ -34,8 +34,12 @@ jobs:
 
       - name: Verify tag version matches Cargo.toml
         run: |
+          # Strip a leading "v" and any SemVer build metadata (+...) so a tag
+          # like v1.0.5 matches a Cargo.toml version like 1.0.5+1.
           TAG="${GITHUB_REF_NAME#v}"
+          TAG="${TAG%%+*}"
           CARGO=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n 1)
+          CARGO="${CARGO%%+*}"
           echo "tag=$TAG cargo=$CARGO"
           if [ "$TAG" != "$CARGO" ]; then
             echo "error: git tag version ($TAG) does not match Cargo.toml version ($CARGO)" >&2
