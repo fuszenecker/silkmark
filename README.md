@@ -434,11 +434,9 @@ installer to `installers/`.
 ### Prebuilt installer
 
 Prebuilt `.deb` installers are published as GitHub Release assets (no zip) on version
-tags. Download the latest from the GitHub Releases page, or directly:
+tags. Download the latest from the GitHub Releases page:
 
-```sh
-curl -LO https://github.com/hg2ecz/silkmark/releases/latest/download/silkmark.deb
-```
+https://github.com/hg2ecz/silkmark/releases
 
 ## Security
 

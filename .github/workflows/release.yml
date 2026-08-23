@@ -2,12 +2,9 @@ name: release
 
 # Push a version tag (e.g. v1.0.4) to build the .deb and .exe and attach them
 # to a GitHub Release. Release assets are served as raw files — no zip — so
-# each gets a permanent direct-download URL. Stable copies are also uploaded so
-# the `latest` download URLs always resolve:
+# each gets a permanent versioned direct-download URL:
 #   https://github.com/hg2ecz/silkmark/releases/download/<tag>/silkmark_<ver>_<arch>.deb
 #   https://github.com/hg2ecz/silkmark/releases/download/<tag>/silkmark_<ver>_win64-setup.exe
-#   https://github.com/hg2ecz/silkmark/releases/latest/download/silkmark.deb
-#   https://github.com/hg2ecz/silkmark/releases/latest/download/silkmark-win64-setup.exe
 #
 # The `release` job builds the .deb and creates the GitHub Release; the
 # `release-windows` job then builds the .exe and attaches it to that release.
@@ -53,14 +50,10 @@ jobs:
       - name: Show built installer
         run: ls -lh installers/
 
-      - name: Stage stable download name
-        run: cp installers/silkmark_*.deb installers/silkmark.deb
-
       - name: Create release and upload .deb
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            installers/silkmark.deb
             installers/silkmark_*.deb
           generate_release_notes: true
 
@@ -99,8 +92,8 @@ jobs:
         run: |
           set -eu
           mapfile -t exe_files < <(find installers -name '*.exe' | sort)
-          if [ "${#exe_files[@]}" -lt 2 ]; then
-            echo "Expected versioned + stable .exe files; found ${#exe_files[@]}:" >&2
+          if [ "${#exe_files[@]}" -lt 1 ]; then
+            echo "No .exe found to publish:" >&2
             printf '  %s\n' "${exe_files[@]}" >&2
             exit 1
           fi

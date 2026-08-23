@@ -200,9 +200,5 @@ if [ ! -f "$OUT" ]; then
     exit 1
 fi
 
-# A stable-name copy so the "latest" download URL always resolves:
-#   https://github.com/hg2ecz/silkmark/releases/latest/download/silkmark-win64-setup.exe
-cp -f "$OUT" "$INSTALLERS/silkmark-win64-setup.exe"
-
 printf '\n==> Built installer: %s\n' "$OUT"
 printf '==> Install with: %s\n' "$OUT_WIN"

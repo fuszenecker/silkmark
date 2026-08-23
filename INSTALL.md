@@ -68,13 +68,8 @@ On GitHub Actions the same pipeline runs on `windows-latest` via
 
 Prebuilt `.deb` and Windows `.exe` installers are published as GitHub Release
 assets (no zip) on version tags. Download the latest from the GitHub Releases
-page, or directly:
+page:
 
-```sh
-# Linux (.deb)
-curl -LO https://github.com/hg2ecz/silkmark/releases/latest/download/silkmark.deb
-# Windows (.exe)
-curl -LO https://github.com/hg2ecz/silkmark/releases/latest/download/silkmark-win64-setup.exe
-```
+https://github.com/hg2ecz/silkmark/releases
 
 See `CHANGELOG.md` for released versions.
