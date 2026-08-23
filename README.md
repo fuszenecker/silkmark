@@ -2,45 +2,6 @@
 
 A deliberately small GTK4-FFI Markdown browser written in Rust.
 
-## Current highlights
-
-- Completed the intentionally HTML-free CommonMark baseline with four-column indented code blocks, `)` ordered-list markers, and email autolinks.
-
-Safety & robustness audit before the next feature cycle:
-
-- Hardened GTK/libcurl callback pointer checks.
-- Shared atomic persistence for session, bookmarks and disk cache.
-- Malformed-input and large-document regression coverage.
-- Reduced avoidable parser panics while retaining zero crates.io dependencies.
-
-## v0.40.1 highlights
-
-- Expanded the built-in dependency-free fenced-code highlighter.
-- Added C#, Java, Kotlin, Go, Swift, Nim, JavaScript, TypeScript, SQL, Lua, Ruby, PHP, Dart, Scala, and Zig.
-- Added common fence aliases such as `cs`, `c#`, `kt`, `golang`, `js`, `jsx`, `ts`, `tsx`, and `rb`.
-- Highlighting remains intentionally lightweight and documentation-oriented.
-
-## v0.39.3 highlights
-
-- Uses Rust Edition 2024 without a fixed MSRV in Cargo.toml.
-- `rust-toolchain.toml` follows the stable Rust channel and includes rustfmt and clippy.
-- Updated Rust 2024 FFI/env safety requirements (`unsafe extern` blocks and unsafe environment mutation).
-- Centralized application version strings on `CARGO_PKG_VERSION`.
-
-- Added a curated CommonMark/GFM regression suite covering block, inline, link, table, footnote, code-fence, task-list, math, and nesting behavior.
-- Added `COMPATIBILITY.md`, documenting SilkMark's target profile: CommonMark + practical GFM + GitHub-style math.
-- Added `examples/regression-suite.md` as a visual smoke-test document.
-- Kept the suite self-contained: no network test dependency and no new crates.io dependencies.
-
-## v0.38.0 highlights
-
-- bounded image loading: at most 4 HTTPS image fetches run concurrently; remaining images are queued
-- queue cleanup when a tab/page is rebuilt or closed, preventing stale image work from accumulating
-- `--stats` reports Markdown parse and GTK render timings to stderr
-- parse statistics include source bytes, block/line count, link count and heading count
-- render statistics include block count and active/queued image work
-- existing 16-image / 32 MiB in-memory image cache remains bounded
-
 Example:
 
 ```sh
