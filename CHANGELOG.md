@@ -6,6 +6,8 @@
 - apply `--allow-host` to both HTTP and HTTPS hosts
 - recognize plain and angle-bracket HTTP autolinks in Markdown
 - keep ftp:, data:, javascript: and remote file authorities rejected
+- add `tools/build-installer.sh` and `tools/Containerfile`: build the `.deb` inside a reproducible Debian + Rust Podman image and output a versioned installer to `installers/`
+- add GitHub Actions: `build` (cargo build + test), `build-installer` (`.deb` artifact), and `release` (publish `.deb` as a directly-downloadable Release asset on `v*` tags)
 
 ## 1.0.4
 

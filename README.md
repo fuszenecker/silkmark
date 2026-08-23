@@ -417,6 +417,29 @@ sudo dpkg -i silkmark.deb
 for the exact runtime dependencies of the current Debian/Ubuntu system, and creates
 `silkmark.deb`. An optional first argument selects another output filename.
 
+### Reproducible container build
+
+To build the `.deb` without depending on the host machine's installed libraries, use
+the Podman-based build environment:
+
+```sh
+./tools/build-installer.sh
+sudo dpkg -i installers/silkmark_*.deb
+```
+
+`tools/build-installer.sh` builds a Debian + Rust container image from
+`tools/Containerfile`, runs `tools/build-deb.sh` inside it, and writes a versioned
+installer to `installers/`.
+
+### Prebuilt installer
+
+Prebuilt `.deb` installers are published as GitHub Release assets (no zip) on version
+tags. Download the latest from the GitHub Releases page, or directly:
+
+```sh
+curl -LO https://github.com/<owner>/silkmark/releases/latest/download/silkmark.deb
+```
+
 ## Security
 
 See `SECURITY.md` for the security model, input/resource boundaries, and native-FFI release guidance.

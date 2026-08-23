@@ -2,8 +2,10 @@ name: release
 
 # Push a version tag (e.g. v1.0.4) to build the .deb and attach it to a
 # GitHub Release. Release assets are served as raw files — no zip — so each
-# .deb gets a permanent direct-download URL:
-#   https://github.com/fuszenecker/silkmark/releases/download/<tag>/silkmark_<ver>_<arch>.deb
+# .deb gets a permanent direct-download URL. A stable `silkmark.deb` copy is
+# also uploaded so the `latest` download URL always resolves:
+#   https://github.com/<owner>/silkmark/releases/download/<tag>/silkmark_<ver>_<arch>.deb
+#   https://github.com/<owner>/silkmark/releases/latest/download/silkmark.deb
 
 on:
   push:
@@ -42,8 +44,13 @@ jobs:
       - name: Show built installer
         run: ls -lh installers/
 
+      - name: Stage stable download name
+        run: cp installers/silkmark_*.deb installers/silkmark.deb
+
       - name: Create release and upload .deb
         uses: softprops/action-gh-release@v2
         with:
-          files: installers/*.deb
+          files: |
+            installers/silkmark.deb
+            installers/silkmark_*.deb
           generate_release_notes: true

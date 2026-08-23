@@ -39,6 +39,22 @@ cargo test
 cargo build --release
 ```
 
+## Build environment and CI
+
+- `tools/build-deb.sh` builds a `.deb` with the host toolchain and resolves
+  runtime dependencies via `dpkg-shlibdeps`.
+- `tools/build-installer.sh` builds the same `.deb` inside a reproducible
+  Debian + Rust Podman image (`tools/Containerfile`) and writes a versioned
+  installer to `installers/`. Use this when the result must not depend on the
+  host machine's installed libraries.
+- `.github/workflows/build.yml` runs `cargo build --release` and `cargo test`
+  on push to `main` and on pull requests.
+- `.github/workflows/build-installer.yml` builds the `.deb` through the same
+  Podman flow on push/pull requests and uploads it as a workflow artifact.
+- `.github/workflows/release.yml` triggers on `v*` tags, verifies the tag
+  version against `Cargo.toml`, builds the `.deb`, and attaches it to a
+  GitHub Release as a directly-downloadable asset (no zip).
+
 ## Rust 2024 FFI safety policy
 
 SilkMark intentionally uses direct C ABI bindings for GTK, GDK-Pixbuf, Cairo, GLib, and libcurl.

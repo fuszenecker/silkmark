@@ -26,6 +26,16 @@ It should also be smoke-tested with:
 - tables, footnotes, fenced code, syntax highlighting, and math;
 - `--offline`, `--disk-cache`, `--allow-host`, and `--stats`.
 
+## Continuous integration
+
+GitHub Actions run on push to `main` and on pull requests:
+
+- `build` — `cargo build --release` and `cargo test` against the native GTK4/gdk-pixbuf/libcurl development packages.
+- `build-installer` — builds the `.deb` through the Podman flow (`tools/build-installer.sh`) and uploads it as a workflow artifact.
+- `release` — on `v*` tags, verifies the tag version against `Cargo.toml`, builds the `.deb`, and attaches it to a GitHub Release as a directly-downloadable asset.
+
+The complete release gate (formatting and Clippy with warnings denied) remains `tools/release-check.sh`; CI covers build and test.
+
 ## Feature freeze
 
 Until the 1.0 compatibility contract is finalized, changes after v0.40 should normally be limited to:
