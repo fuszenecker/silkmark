@@ -8,7 +8,7 @@ set -eu
 # dpkg-shlibdeps dependency resolution, but runs it in an isolated container so
 # the resulting .deb does not depend on the host machine's installed libraries.
 #
-# Usage:  scripts/build-installer.sh
+# Usage:  tools/build-installer.sh
 # Output: installers/silkmark_<version>_<arch>.deb
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
@@ -40,7 +40,7 @@ mkdir -p "$INSTALLERS"
 
 # Build (or reuse) the Rust compiling environment image.
 echo "==> Building podman image: $IMAGE"
-podman build -t "$IMAGE" -f "$ROOT/scripts/Containerfile" "$ROOT"
+podman build -t "$IMAGE" -f "$ROOT/tools/Containerfile" "$ROOT"
 
 # Run the package build inside the container. A tmpfs shadows the host's
 # target/ so the build is clean and does not reuse host-compiled artifacts.
