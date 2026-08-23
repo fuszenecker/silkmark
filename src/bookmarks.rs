@@ -30,7 +30,7 @@ fn legacy_data_file() -> Option<PathBuf> {
 }
 
 fn supported_url(url: &str) -> bool {
-    url.starts_with("https://") || url.starts_with("file://")
+    url.starts_with("https://") || url.starts_with("http://") || url.starts_with("file://")
 }
 
 fn parse_text(text: &str) -> Vec<Bookmark> {
@@ -93,10 +93,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn loads_https_and_local_file_bookmarks() {
+    fn loads_network_and_local_file_bookmarks() {
         let items =
             parse_text("Remote\thttps://example.org/readme.md\nLocal\tfile:///tmp/readme.md\nBad\thttp://example.org/x.md\n");
-        assert_eq!(items.len(), 2);
+        assert_eq!(items.len(), 3);
         assert!(items.iter().any(|item| item.url.starts_with("file://")));
     }
 

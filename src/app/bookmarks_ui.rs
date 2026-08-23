@@ -130,7 +130,7 @@ impl App {
             return;
         }
         let url = self.tabs[self.active].url.clone();
-        if !(url.starts_with("https://") || url.starts_with("file://")) {
+        if !(url.starts_with("https://") || url.starts_with("http://") || url.starts_with("file://")) {
             self.tabs[self.active].status = "Open a Markdown page before bookmarking".into();
             self.refresh_status();
             return;

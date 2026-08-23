@@ -142,6 +142,14 @@ mod core_tests {
     }
 
     #[test]
+    fn angle_and_bare_http_are_autolinks() {
+        let d = parse("<http://example.org:8080/a> and http://example.org:8080/b.");
+        assert_eq!(d.links.len(), 2);
+        assert_eq!(d.links[0].target, "http://example.org:8080/a");
+        assert_eq!(d.links[1].target, "http://example.org:8080/b");
+    }
+
+    #[test]
     fn angle_and_bare_https_are_autolinks() {
         let d = parse("<https://example.org/a> and https://example.org/b.");
         assert_eq!(d.links.len(), 2);

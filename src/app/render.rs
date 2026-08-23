@@ -437,9 +437,7 @@ impl App {
                 Style::Quote => format!("<i>›  {}</i>", line.markup),
                 Style::Code => format!("<tt>{}</tt>", line.markup),
                 Style::TableSep => String::new(),
-                Style::Math => {
-                    format!("<span font_family=\"serif\" size=\"large\">{}</span>", line.markup)
-                }
+                Style::Math => format!("<span font_family=\"serif\" size=\"large\">{}</span>", line.markup),
                 Style::Footnote => line.markup,
                 _ => line.markup,
             };

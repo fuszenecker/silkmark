@@ -336,7 +336,7 @@ pub(super) fn parse_inline_ctx(s: &str, refs: &ReferenceMap) -> (String, Vec<Lin
                 continue;
             }
         }
-        if tail.starts_with("<https://") {
+        if tail.starts_with("<https://") || tail.starts_with("<http://") {
             if let Some(end) = tail.find('>') {
                 let target = &tail[1..end];
                 out.push_str("<a href=\"");
@@ -365,7 +365,7 @@ pub(super) fn parse_inline_ctx(s: &str, refs: &ReferenceMap) -> (String, Vec<Lin
                 }
             }
         }
-        if tail.starts_with("https://") {
+        if tail.starts_with("https://") || tail.starts_with("http://") {
             let mut end = tail.len();
             for (j, ch) in tail.char_indices() {
                 if ch.is_whitespace() || ch == '<' || ch == '>' {
@@ -381,7 +381,8 @@ pub(super) fn parse_inline_ctx(s: &str, refs: &ReferenceMap) -> (String, Vec<Lin
                     break;
                 }
             }
-            if end > "https://".len() {
+            let scheme_len = if tail.starts_with("https://") { "https://".len() } else { "http://".len() };
+            if end > scheme_len {
                 let target = &tail[..end];
                 out.push_str("<a href=\"");
                 out.push_str(&escape_attr(target));

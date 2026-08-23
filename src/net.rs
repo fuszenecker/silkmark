@@ -11,6 +11,7 @@ use std::sync::{Mutex, OnceLock};
 static VERBOSE: AtomicBool = AtomicBool::new(false);
 static DISK_CACHE: AtomicBool = AtomicBool::new(false);
 static OFFLINE: AtomicBool = AtomicBool::new(false);
+static ALLOW_HTTP: AtomicBool = AtomicBool::new(false);
 static MAX_DOCUMENT_SIZE: AtomicUsize = AtomicUsize::new(4 * 1024 * 1024);
 static MAX_IMAGE_SIZE: AtomicUsize = AtomicUsize::new(12 * 1024 * 1024);
 static MAX_REDIRECTS: AtomicUsize = AtomicUsize::new(8);
@@ -30,6 +31,9 @@ pub fn set_offline(value: bool) {
         DISK_CACHE.store(true, Ordering::Relaxed);
     }
 }
+pub fn set_allow_http(value: bool) {
+    ALLOW_HTTP.store(value, Ordering::Relaxed);
+}
 fn verbose() -> bool {
     VERBOSE.load(Ordering::Relaxed)
 }
@@ -38,6 +42,12 @@ fn disk_cache() -> bool {
 }
 fn offline() -> bool {
     OFFLINE.load(Ordering::Relaxed)
+}
+fn allow_http() -> bool {
+    ALLOW_HTTP.load(Ordering::Relaxed)
+}
+fn is_network_url(url: &str) -> bool {
+    url.starts_with("https://") || (allow_http() && url.starts_with("http://"))
 }
 pub fn set_limits(document_mib: usize, image_mib: usize, redirects: usize, connect_timeout_s: usize, total_timeout_s: usize) {
     MAX_DOCUMENT_SIZE.store(document_mib.max(1).saturating_mul(1024 * 1024), Ordering::Relaxed);
@@ -51,8 +61,8 @@ pub fn set_allowed_hosts(hosts: Vec<String>) {
     *v.lock().unwrap_or_else(|poisoned| poisoned.into_inner()) =
         hosts.into_iter().map(|h| h.trim().trim_end_matches('.').to_ascii_lowercase()).filter(|h| !h.is_empty()).collect();
 }
-fn host_of_https(url: &str) -> Option<String> {
-    let rest = url.strip_prefix("https://")?;
+fn host_of_network_url(url: &str) -> Option<String> {
+    let rest = url.strip_prefix("https://").or_else(|| url.strip_prefix("http://"))?;
     let authority = rest.split(|c| c == '/' || c == '?' || c == '#').next()?;
     if authority.contains('@') {
         return None;
@@ -65,7 +75,7 @@ fn host_of_https(url: &str) -> Option<String> {
     if host.is_empty() { None } else { Some(host.trim_end_matches('.').to_ascii_lowercase()) }
 }
 fn host_allowed(url: &str) -> bool {
-    let Some(host) = host_of_https(url) else {
+    let Some(host) = host_of_network_url(url) else {
         return false;
     };
     let Some(lock) = ALLOWED_HOSTS.get() else {
@@ -327,8 +337,8 @@ unsafe extern "C" fn write_cb(data: *mut c_char, size: usize, nmemb: usize, user
 /// RFC-style URL joining using libcurl itself. Relative paths such as
 /// `img/a.jpg`, `../img/a.jpg`, `/img/a.jpg`, `?v=2` and `#section` are handled.
 /// Spaces/non-ASCII bytes in the target are URL-encoded by libcurl.
-pub fn resolve_https_url(base: &str, target: &str, keep_fragment: bool) -> Option<String> {
-    if base.contains('\0') || target.contains('\0') || !base.starts_with("https://") {
+pub fn resolve_network_url(base: &str, target: &str, keep_fragment: bool) -> Option<String> {
+    if base.contains('\0') || target.contains('\0') || !is_network_url(base) {
         return None;
     }
     let base = CString::new(base).ok()?;
@@ -357,7 +367,7 @@ pub fn resolve_https_url(base: &str, target: &str, keep_fragment: bool) -> Optio
         let mut url = CStr::from_ptr(out).to_string_lossy().into_owned();
         curl_free(out as *mut c_void);
         curl_url_cleanup(h);
-        if !url.starts_with("https://") {
+        if !is_network_url(&url) {
             return None;
         }
         if !keep_fragment {
@@ -439,7 +449,8 @@ fn path_to_file_url(path: &Path, fragment: Option<&str>) -> Option<String> {
     Some(u)
 }
 
-/// Normalize a user-entered location. HTTPS URLs are retained; file:// URLs and
+/// Normalize a user-entered location. HTTPS URLs are retained; HTTP URLs are
+/// accepted only when --allow-http is enabled; file:// URLs and
 /// ordinary filesystem paths become absolute file:// URLs. A trailing #fragment
 /// is retained so local section deep-links work exactly like web documents.
 pub fn normalize_location(input: &str) -> Option<String> {
@@ -447,7 +458,7 @@ pub fn normalize_location(input: &str) -> Option<String> {
     if t.is_empty() {
         return None;
     }
-    if t.starts_with("https://") {
+    if t.starts_with("https://") || (allow_http() && t.starts_with("http://")) {
         return if host_allowed(t) { Some(t.to_string()) } else { None };
     }
     if t.starts_with("file://") {
@@ -464,27 +475,29 @@ pub fn normalize_location(input: &str) -> Option<String> {
     path_to_file_url(Path::new(path), frag)
 }
 
-/// Resolve Markdown links and image references for both HTTPS and local files.
-/// Local documents may link to local relative paths or to absolute HTTPS URLs.
+/// Resolve Markdown links and image references for network and local files.
+/// HTTP is accepted only when --allow-http is enabled.
 pub fn resolve_resource(base: &str, target: &str, keep_fragment: bool) -> Option<String> {
     let target = target.trim();
     if target.is_empty() {
         return None;
     }
-    if target.starts_with("data:")
-        || target.starts_with("javascript:")
-        || target.starts_with("http:")
-        || target.starts_with("ftp:")
-    {
+    if target.starts_with("data:") || target.starts_with("javascript:") || target.starts_with("ftp:") {
         return None;
     }
-    if base.starts_with("https://") {
-        return resolve_https_url(base, target, keep_fragment);
+    if target.starts_with("http://") && !allow_http() {
+        return None;
+    }
+    if is_network_url(base) {
+        return resolve_network_url(base, target, keep_fragment);
     }
     if !base.starts_with("file://") {
         return None;
     }
-    if target.starts_with("https://") {
+    if target.starts_with("https://") || (allow_http() && target.starts_with("http://")) {
+        if !host_allowed(target) {
+            return None;
+        }
         let mut u = target.to_string();
         if !keep_fragment {
             if let Some(i) = u.find('#') {
@@ -548,11 +561,14 @@ fn perform(url: &str, limit: usize, kind: &str) -> Result<(String, Vec<u8>), Str
     if verbose() {
         eprintln!("[open:{kind}] {url}");
     }
-    if !url.starts_with("https://") {
-        return Err(format!("Only HTTPS {kind} URLs are allowed"));
+    if !is_network_url(url) {
+        return Err(format!("Unsupported network {kind} URL"));
     }
     if !host_allowed(url) {
-        return Err(format!("Host is not allowed by --allow-host: {}", host_of_https(url).unwrap_or_else(|| "<invalid>".into())));
+        return Err(format!(
+            "Host is not allowed by --allow-host: {}",
+            host_of_network_url(url).unwrap_or_else(|| "<invalid>".into())
+        ));
     }
     let cached = if disk_cache() { load_cache(url, kind, limit) } else { None };
     if offline() {
@@ -573,7 +589,8 @@ fn perform(url: &str, limit: usize, kind: &str) -> Result<(String, Vec<u8>), Str
     let c_url = CString::new(url).map_err(|_| "URL contains NUL".to_string())?;
     let ua =
         CString::new(format!("SilkMark/{}", env!("CARGO_PKG_VERSION"))).map_err(|_| "User-Agent contains NUL".to_string())?;
-    let https = CString::new("https").map_err(|_| "HTTPS protocol name contains NUL".to_string())?;
+    let protocols =
+        CString::new(if allow_http() { "http,https" } else { "https" }).map_err(|_| "Protocol list contains NUL".to_string())?;
     let mut sink = Sink { bytes: Vec::with_capacity(64 * 1024), too_large: false, limit };
     let mut hs = HeaderSink { etag: String::new(), last_modified: String::new() };
     ensure_curl_initialized()?;
@@ -585,8 +602,8 @@ fn perform(url: &str, limit: usize, kind: &str) -> Result<(String, Vec<u8>), Str
         let set = |opt, value: *const c_char| curl_easy_setopt(h, opt, value);
         if set(CURLOPT_URL, c_url.as_ptr()) != 0
             || set(CURLOPT_USERAGENT, ua.as_ptr()) != 0
-            || set(CURLOPT_PROTOCOLS_STR, https.as_ptr()) != 0
-            || set(CURLOPT_REDIR_PROTOCOLS_STR, https.as_ptr()) != 0
+            || set(CURLOPT_PROTOCOLS_STR, protocols.as_ptr()) != 0
+            || set(CURLOPT_REDIR_PROTOCOLS_STR, protocols.as_ptr()) != 0
             || curl_easy_setopt(h, CURLOPT_FOLLOWLOCATION, 1 as c_long) != 0
             || curl_easy_setopt(h, CURLOPT_FAILONERROR, 1 as c_long) != 0
             || curl_easy_setopt(h, CURLOPT_MAXREDIRS, MAX_REDIRECTS.load(Ordering::Relaxed) as c_long) != 0
@@ -660,13 +677,13 @@ fn perform(url: &str, limit: usize, kind: &str) -> Result<(String, Vec<u8>), Str
             };
             return Err(msg);
         }
-        if !final_url.starts_with("https://") {
-            return Err(format!("{kind} redirect left HTTPS"));
+        if !is_network_url(&final_url) {
+            return Err(format!("{kind} redirect used a disallowed protocol"));
         }
         if !host_allowed(&final_url) {
             return Err(format!(
                 "Redirected host is not allowed by --allow-host: {}",
-                host_of_https(&final_url).unwrap_or_else(|| "<invalid>".into())
+                host_of_network_url(&final_url).unwrap_or_else(|| "<invalid>".into())
             ));
         }
         if verbose() && final_url != url {
@@ -684,24 +701,24 @@ fn perform(url: &str, limit: usize, kind: &str) -> Result<(String, Vec<u8>), Str
 }
 
 pub fn fetch(url: &str) -> Result<(String, String), String> {
-    let (final_url, bytes) = if url.starts_with("https://") {
+    let (final_url, bytes) = if is_network_url(url) {
         perform(url, configured_document_limit(), "document")?
     } else if url.starts_with("file://") {
         read_local(url, configured_document_limit(), "document")?
     } else {
-        return Err("Only HTTPS URLs and local files are supported".into());
+        return Err("Only allowed HTTP(S) URLs and local files are supported".into());
     };
     let text = String::from_utf8(bytes).map_err(|_| "Document is not UTF-8 Markdown".to_string())?;
     Ok((final_url, text))
 }
 
 pub fn fetch_image(url: &str) -> Result<Vec<u8>, String> {
-    let (final_url, bytes) = if url.starts_with("https://") {
+    let (final_url, bytes) = if is_network_url(url) {
         perform(url, configured_image_limit(), "image")?
     } else if url.starts_with("file://") {
         read_local(url, configured_image_limit(), "image")?
     } else {
-        return Err("Only HTTPS URLs and local image files are supported".into());
+        return Err("Only allowed HTTP(S) URLs and local image files are supported".into());
     };
     if verbose() {
         eprintln!("[data:image] {final_url} ({} bytes)", bytes.len());
@@ -716,7 +733,7 @@ mod tests {
     #[test]
     fn relative_asset_url() {
         assert_eq!(
-            resolve_https_url("https://example.org/docs/readme.md", "images/a.jpg", false).as_deref(),
+            resolve_network_url("https://example.org/docs/readme.md", "images/a.jpg", false).as_deref(),
             Some("https://example.org/docs/images/a.jpg")
         );
     }
@@ -724,7 +741,7 @@ mod tests {
     #[test]
     fn parent_relative_asset_url() {
         assert_eq!(
-            resolve_https_url("https://example.org/docs/ch1/readme.md", "../images/a.jpg?v=2", false).as_deref(),
+            resolve_network_url("https://example.org/docs/ch1/readme.md", "../images/a.jpg?v=2", false).as_deref(),
             Some("https://example.org/docs/images/a.jpg?v=2")
         );
     }
@@ -732,7 +749,7 @@ mod tests {
     #[test]
     fn root_relative_asset_url() {
         assert_eq!(
-            resolve_https_url("https://example.org/docs/readme.md", "/assets/a.jpg", false).as_deref(),
+            resolve_network_url("https://example.org/docs/readme.md", "/assets/a.jpg", false).as_deref(),
             Some("https://example.org/assets/a.jpg")
         );
     }
@@ -740,7 +757,7 @@ mod tests {
     #[test]
     fn relative_markdown_link_with_fragment() {
         assert_eq!(
-            resolve_https_url("https://example.org/docs/ch1/a.md", "../api/ref.md#Request format", true).as_deref(),
+            resolve_network_url("https://example.org/docs/ch1/a.md", "../api/ref.md#Request format", true).as_deref(),
             Some("https://example.org/docs/api/ref.md#Request%20format")
         );
     }
@@ -748,7 +765,7 @@ mod tests {
     #[test]
     fn fragment_only_relative_link() {
         assert_eq!(
-            resolve_https_url("https://example.org/docs/a.md#old", "#Local section", true).as_deref(),
+            resolve_network_url("https://example.org/docs/a.md#old", "#Local section", true).as_deref(),
             Some("https://example.org/docs/a.md#Local%20section")
         );
     }

@@ -987,7 +987,7 @@ usage: silkmark [options] [URL-or-file ...]",
 -v, --verbose              print opened resources, redirects and cache information to stderr
 --stats                     print parse/render/image-queue performance statistics to stderr
 --disk-cache               enable persistent HTTP document/image cache
---offline                  do not use the network; HTTPS resources must be cached
+--offline                  do not use the network; network resources must be cached
 --clear-cache              remove the persistent SilkMark HTTP cache and exit
 --no-restore               do not restore the previous tabs/session on startup
 --theme MODE              reader theme: light, dark or system (default: light)
@@ -997,13 +997,15 @@ usage: silkmark [options] [URL-or-file ...]",
 --max-redirects N          maximum HTTPS redirects (default: 8, maximum: 64)
 --connect-timeout N        connection timeout in seconds (default: 10)
 --timeout N                total request timeout in seconds (default: 30)
---allow-host HOST          allow only this HTTPS host; repeatable. A leading dot also permits subdomains
+--allow-http               allow plain HTTP URLs in addition to HTTPS (insecure; intended for trusted LANs)
+--allow-host HOST          allow only this HTTP(S) host; repeatable. A leading dot also permits subdomains
 
 Examples:
   silkmark --allow-host example.org https://example.org/README.md
   silkmark --allow-host .example.org --max-image-mib 8 https://docs.example.org/index.md
+  silkmark --allow-http --allow-host server http://server:8080/index.md
 
-Only https:// and local file:// resources are supported. http:, ftp:, data: and javascript: targets are rejected. Redirects are restricted to HTTPS and, when --allow-host is used, to the same allowlist.
+HTTPS and local file:// resources are supported by default. Plain HTTP is accepted only with --allow-http. ftp:, data: and javascript: targets remain rejected. Redirects are restricted to the protocols allowed for the run and, when --allow-host is used, to the same allowlist.
 
 Each URL or local Markdown path opens in its own tab. Relative links and images are resolved against the current document. Ctrl+D toggles a bookmark. Ctrl+M opens the bookmark manager. Ctrl+F searches. Ctrl+Space completes the URL from bookmarks/history or section headings. Ctrl+Shift+C copies the current document/section link. Ctrl+PageUp/PageDown switches tabs, Alt+1..9 selects a tab, / opens search, g g jumps to the top, and G jumps to the bottom. Tabs can be dragged to reorder. Ctrl+Shift+T reopens the last closed tab.");
         return;
@@ -1015,6 +1017,7 @@ Each URL or local Markdown path opens in its own tab. Relative links and images 
     let mut no_restore = false;
     let mut disk_cache = false;
     let mut offline = false;
+    let mut allow_http = false;
     let mut clear_cache = false;
     let mut document_mib = 4usize;
     let mut image_mib = 12usize;
@@ -1044,6 +1047,7 @@ Each URL or local Markdown path opens in its own tab. Relative links and images 
                 offline = true;
                 disk_cache = true;
             }
+            "--allow-http" => allow_http = true,
             "--clear-cache" => clear_cache = true,
             "--theme" | "--max-document-mib" | "--max-image-mib" | "--max-redirects" | "--connect-timeout" | "--timeout"
             | "--allow-host" => {
@@ -1104,6 +1108,7 @@ Each URL or local Markdown path opens in its own tab. Relative links and images 
     net::set_verbose(verbose);
     net::set_disk_cache(disk_cache);
     net::set_offline(offline);
+    net::set_allow_http(allow_http);
     net::set_limits(document_mib, image_mib, max_redirects, connect_timeout, total_timeout);
     net::set_allowed_hosts(allow_hosts);
     let restore_state = if !no_restore && start_urls.is_empty() { session::load() } else { None };

@@ -245,7 +245,7 @@ impl App {
             return;
         }
         let Some(url) = net::normalize_location(url.trim()) else {
-            self.tabs[tab].status = "Use an https:// URL, file:// URL, or local Markdown path".into();
+            self.tabs[tab].status = "Use an allowed HTTP(S) URL, file:// URL, or local Markdown path".into();
             self.refresh_status();
             return;
         };
