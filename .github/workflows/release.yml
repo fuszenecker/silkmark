@@ -1,0 +1,49 @@
+name: release
+
+# Push a version tag (e.g. v1.0.4) to build the .deb and attach it to a
+# GitHub Release. Release assets are served as raw files — no zip — so each
+# .deb gets a permanent direct-download URL:
+#   https://github.com/fuszenecker/silkmark/releases/download/<tag>/silkmark_<ver>_<arch>.deb
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write  # required to create the Release and upload assets
+
+jobs:
+  release:
+    name: Publish .deb release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
+
+      - name: Verify tag version matches Cargo.toml
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          CARGO=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n 1)
+          echo "tag=$TAG cargo=$CARGO"
+          if [ "$TAG" != "$CARGO" ]; then
+            echo "error: git tag version ($TAG) does not match Cargo.toml version ($CARGO)" >&2
+            echo "fix: bump version in Cargo.toml to $TAG, commit, then push the tag." >&2
+            exit 1
+          fi
+
+      - name: Build .deb installer
+        run: tools/build-installer.sh
+
+      - name: Show built installer
+        run: ls -lh installers/
+
+      - name: Create release and upload .deb
+        uses: softprops/action-gh-release@v2
+        with:
+          files: installers/*.deb
+          generate_release_notes: true
