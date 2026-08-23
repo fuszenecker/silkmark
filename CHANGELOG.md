@@ -1,4 +1,4 @@
-## 1.0.5
+## 1.0.5+1
 
 - add explicit `--allow-http` opt-in for trusted LAN/intranet Markdown servers
 - keep HTTPS-only networking as the default
@@ -8,6 +8,7 @@
 - keep ftp:, data:, javascript: and remote file authorities rejected
 - add `tools/build-installer.sh` and `tools/Containerfile`: build the `.deb` inside a reproducible Debian + Rust Podman image and output a versioned installer to `installers/`
 - add GitHub Actions: `build` (cargo build + test), `build-installer` (`.deb` artifact), and `release` (publish `.deb` as a directly-downloadable Release asset on `v*` tags)
+- add Windows installer pipeline: `installer/nsis/silkmark.nsi` (NSIS installer with `bin/lib/share` GTK layout, `.md` association, uninstaller), `tools/build-windows-installer.sh` (MSYS2/MINGW64 build, recursive DLL-closure staging, relocatable gdk-pixbuf loaders cache and glib schemas, icon themes), and `build-windows.yml` CI + `release-windows` release job publishing the `.exe` as a Release asset
 
 ## 1.0.4
 
