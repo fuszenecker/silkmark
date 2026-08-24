@@ -1,6 +1,6 @@
 [package]
 name = "silkmark"
-version = "1.0.6+0"
+version = "1.0.6+1"
 edition = "2024"
 description = "SilkMark: a lightweight GTK4-FFI Markdown browser with tabs, bookmarks, URL/local-file bar and HTTPS via system libcurl"
 license = "MIT"

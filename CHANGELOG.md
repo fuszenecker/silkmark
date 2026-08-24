@@ -1,3 +1,9 @@
+## 1.0.6+1
+
+- collapse CI to two workflows: `build` (cargo build + cargo test on push/PR) and `release` (tag-triggered; a `ci` compile gate, then `.deb` and `.exe` builds that publish to the GitHub Release)
+- drop the per-push `build-windows.yml` and `build-installer.yml` workflows, which rebuilt the full `.exe` and `.deb` on every push to main (~10 min of CI per commit) and duplicated the exact build steps the release re-ran on the tag
+- the tag release now gates on a `cargo build --release` compile check (plus the existing tag/Cargo.toml version-match) before any installer is built or published
+
 ## 1.0.6+0
 
 - ship a CA bundle (`ca-bundle.crt`) next to the Windows `silkmark.exe` and point libcurl at it via `CURLOPT_CAINFO`, fixing `CURLE_SSL_CACERT_BADFILE` ("Problem with the SSL CA cert (path? access rights?)") on clean Windows installs where MSYS2 libcurl's compiled-in CA path does not exist
