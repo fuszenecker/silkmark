@@ -1,13 +1,16 @@
 name: release
 
-# Push a version tag (e.g. v1.0.4) to build the .deb and .exe and attach them
+# Push a version tag (e.g. v1.0.6) to build the .deb and .exe and attach them
 # to a GitHub Release. Release assets are served as raw files — no zip — so
 # each gets a permanent versioned direct-download URL:
 #   https://github.com/hg2ecz/silkmark/releases/download/<tag>/silkmark_<ver>_<arch>.deb
 #   https://github.com/hg2ecz/silkmark/releases/download/<tag>/silkmark_<ver>_win64-setup.exe
 #
-# The `release` job builds the .deb and creates the GitHub Release; the
-# `release-windows` job then builds the .exe and attaches it to that release.
+# The `ci` job compiles on the tag (and checks the tag matches Cargo.toml) as a
+# gate; `release` then builds the .deb inside the reproducible Podman image and
+# creates the GitHub Release; `release-windows` then builds the .exe and
+# attaches it to that release. Installer builds do NOT run on every push to
+# main — only the `build` workflow does; installers are built on tags here.
 
 on:
   push:
@@ -18,21 +21,23 @@ permissions:
   contents: write  # required to create the Release and upload assets
 
 jobs:
-  release:
-    name: Publish .deb release
+  ci:
+    name: CI build (compile gate)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Podman
+      - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y podman
+          sudo apt-get install -y \
+            cargo rustc pkg-config \
+            libgtk-4-dev libgdk-pixbuf-2.0-dev libcurl4-openssl-dev
 
       - name: Verify tag version matches Cargo.toml
         run: |
           # Strip a leading "v" and any SemVer build metadata (+...) so a tag
-          # like v1.0.5 matches a Cargo.toml version like 1.0.5+1.
+          # like v1.0.6 matches a Cargo.toml version like 1.0.6+0.
           TAG="${GITHUB_REF_NAME#v}"
           TAG="${TAG%%+*}"
           CARGO=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n 1)
@@ -43,6 +48,21 @@ jobs:
             echo "fix: bump version in Cargo.toml to $TAG, commit, then push the tag." >&2
             exit 1
           fi
+
+      - name: cargo build --release
+        run: cargo build --release
+
+  release:
+    name: Publish .deb release
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
 
       - name: Build .deb installer
         run: tools/build-installer.sh
@@ -59,7 +79,7 @@ jobs:
 
   release-windows:
     name: Publish .exe to release
-    needs: release  # the release must already exist so we can upload to it
+    needs: release
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
