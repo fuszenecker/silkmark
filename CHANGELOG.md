@@ -1,3 +1,8 @@
+## 1.0.6+0
+
+- ship a CA bundle (`ca-bundle.crt`) next to the Windows `silkmark.exe` and point libcurl at it via `CURLOPT_CAINFO`, fixing `CURLE_SSL_CACERT_BADFILE` ("Problem with the SSL CA cert (path? access rights?)") on clean Windows installs where MSYS2 libcurl's compiled-in CA path does not exist
+- keep HTTPS certificate verification intact; on Linux the bundled file is absent next to the binary, so libcurl keeps using the system trust store unchanged
+
 ## 1.0.5+1
 
 - add explicit `--allow-http` opt-in for trusted LAN/intranet Markdown servers
