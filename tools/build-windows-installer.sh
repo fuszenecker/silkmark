@@ -114,6 +114,35 @@ done
 echo "    staged ${#DLLS[@]} DLLs"
 
 # ---------------------------------------------------------------------------
+# CA bundle: ship a trust store next to the .exe so libcurl can verify TLS
+# on a clean Windows machine. MSYS2 libcurl's compiled-in default points at
+# the build prefix (C:\msys64\mingw64\...), which does not exist after
+# install; the app points libcurl at this bundled file via CURLOPT_CAINFO.
+# ---------------------------------------------------------------------------
+CA_BUNDLE=""
+for cand in \
+    "$MKEW_PREFIX/etc/pki/tls/cacert.pem" \
+    "$MKEW_PREFIX/ssl/certs/ca-bundle.crt" \
+    "$MKEW_PREFIX/etc/pki/ca/ca-bundle.crt" \
+    "/usr/ssl/certs/ca-bundle.crt"; do
+    if [ -f "$cand" ]; then
+        CA_BUNDLE="$cand"
+        break
+    fi
+done
+# Fall back to a search if the common paths didn't match (layout varies by
+# MSYS2 release and by whether mingw-w64-x86_64-ca-certificates is installed).
+if [ -z "$CA_BUNDLE" ]; then
+    CA_BUNDLE=$(find "$MKEW_PREFIX" \( -name 'ca-bundle.crt' -o -name 'cacert.pem' \) 2>/dev/null | head -n1)
+fi
+if [ -n "$CA_BUNDLE" ]; then
+    echo "==> Staging CA bundle: $CA_BUNDLE"
+    cp -f "$CA_BUNDLE" "$STAGE/bin/ca-bundle.crt"
+else
+    echo "warning: no CA bundle found; HTTPS will fail on the target machine" >&2
+fi
+
+# ---------------------------------------------------------------------------
 # gdk-pixbuf loaders: copy the loader modules and regenerate a relocatable
 # loaders.cache by placing gdk-pixbuf-query-loaders.exe in stage/bin (it
 # computes libdir as <bindir>/../lib, matching the staged layout).

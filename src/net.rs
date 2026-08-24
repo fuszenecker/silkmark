@@ -117,6 +117,7 @@ const CURLOPT_REDIR_PROTOCOLS_STR: u32 = 10319;
 const CURLOPT_HTTPHEADER: u32 = 10023;
 const CURLOPT_HEADERFUNCTION: u32 = 20079;
 const CURLOPT_HEADERDATA: u32 = 10029;
+const CURLOPT_CAINFO: u32 = 10065;
 const CURLINFO_EFFECTIVE_URL: u32 = 0x100001;
 const CURLINFO_RESPONSE_CODE: u32 = 0x200002;
 
@@ -557,6 +558,20 @@ fn read_local(url: &str, limit: usize, kind: &str) -> Result<(String, Vec<u8>), 
     Ok((path_to_file_url(&path, None).unwrap_or_else(|| url.to_string()), bytes))
 }
 
+/// On Windows the installer drops ca-bundle.crt next to the .exe; MSYS2
+/// libcurl's compiled-in CA path points at the build prefix, which does not
+/// exist after install, so point the handle at the bundled file. On Linux
+/// this file is absent next to the binary, so libcurl keeps using the system
+/// default trust store — the presence guard keeps the path portable.
+fn bundled_ca_bundle() -> Option<CString> {
+    let exe = std::env::current_exe().ok()?;
+    let path = exe.parent()?.join("ca-bundle.crt");
+    if !path.is_file() {
+        return None;
+    }
+    CString::new(path.to_string_lossy().into_owned()).ok()
+}
+
 fn perform(url: &str, limit: usize, kind: &str) -> Result<(String, Vec<u8>), String> {
     if verbose() {
         eprintln!("[open:{kind}] {url}");
@@ -593,6 +608,7 @@ fn perform(url: &str, limit: usize, kind: &str) -> Result<(String, Vec<u8>), Str
         CString::new(if allow_http() { "http,https" } else { "https" }).map_err(|_| "Protocol list contains NUL".to_string())?;
     let mut sink = Sink { bytes: Vec::with_capacity(64 * 1024), too_large: false, limit };
     let mut hs = HeaderSink { etag: String::new(), last_modified: String::new() };
+    let cainfo = bundled_ca_bundle();
     ensure_curl_initialized()?;
     unsafe {
         let h = curl_easy_init();
@@ -616,6 +632,12 @@ fn perform(url: &str, limit: usize, kind: &str) -> Result<(String, Vec<u8>), Str
         {
             curl_easy_cleanup(h);
             return Err("curl option setup failed".into());
+        }
+        if let Some(ca) = &cainfo {
+            if curl_easy_setopt(h, CURLOPT_CAINFO, ca.as_ptr()) != 0 {
+                curl_easy_cleanup(h);
+                return Err("curl option setup failed".into());
+            }
         }
         let mut headers: *mut CurlSlist = ptr::null_mut();
         let mut owned: Vec<CString> = Vec::new();
