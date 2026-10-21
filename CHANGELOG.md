@@ -1,3 +1,9 @@
+## Unreleased
+
+- treat an unescaped trailing backslash as a CommonMark hard line break
+- keep list items indented four or more columns as nested list items instead of indented code blocks
+- add `docs/proposals-book-reading.md` with proposals for book-length documents
+
 ## 1.0.5
 
 - add explicit `--allow-http` opt-in for trusted LAN/intranet Markdown servers

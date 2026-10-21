@@ -642,4 +642,25 @@ mod commonmark_v1_release_tests {
         let d = parse("    ```rust\n    let x = 1;\n    ```");
         assert!(d.lines.iter().all(|l| l.code.as_ref().is_none_or(|c| c.language.is_empty())));
     }
+
+    #[test]
+    fn backslash_hard_break_joins_lines_with_a_break() {
+        let d = parse("one\\\ntwo\\\nthree");
+        assert_eq!(d.lines.len(), 1);
+        assert_eq!(d.lines[0].markup, "one\ntwo\nthree");
+        // An escaped backslash is literal, and a trailing one ends the paragraph.
+        assert!(!parse("one\\\\\ntwo").lines[0].markup.contains('\n'));
+        assert_eq!(parse("end\\").lines[0].markup, "end\\");
+    }
+
+    #[test]
+    fn deeply_indented_list_items_stay_nested_lists() {
+        let d = parse("- a\n  - b\n    - c\n    - d\n  - e");
+        assert!(d.lines.iter().all(|l| matches!(l.style, Style::Bullet)));
+        assert_eq!(d.lines.iter().map(|l| l.indent).collect::<Vec<_>>(), [0, 1, 2, 2, 1]);
+        let ordered = parse("1. a\n   1. b\n      1. c");
+        assert!(ordered.lines.iter().all(|l| matches!(l.style, Style::Ordered(_))));
+        // A real indented code block after a blank line is still code.
+        assert!(parse("- a\n\n        code").lines.iter().any(|l| matches!(l.style, Style::Code)));
+    }
 }
