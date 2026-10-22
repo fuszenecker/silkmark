@@ -35,6 +35,8 @@ impl App {
             g_pending: false,
             reader_zoom: 100,
             stats,
+            dark: false,
+            dark_chosen: None,
         }
     }
     pub(crate) unsafe fn add_tab(&mut self) {
@@ -133,6 +135,7 @@ impl App {
             tree_contents_open: self.tree_contents_open,
             tree_links_open: self.tree_links_open,
             tabs,
+            dark: self.dark_chosen,
         };
         if let Err(e) = session::save(&state) {
             if self.verbose {
@@ -189,6 +192,12 @@ impl App {
             self.bookmarks.len()
         );
         set_label(self.status, &s);
+    }
+    pub(crate) unsafe fn toggle_dark(&mut self) {
+        self.dark = !self.dark;
+        self.dark_chosen = Some(self.dark);
+        crate::theme::apply(self.dark);
+        self.save_session();
     }
     pub(crate) unsafe fn toggle_sidebar(&mut self) {
         self.sidebar_visible = !self.sidebar_visible;

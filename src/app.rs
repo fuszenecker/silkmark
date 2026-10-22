@@ -136,6 +136,9 @@ pub(crate) struct App {
     pub(crate) g_pending: bool,
     pub(crate) reader_zoom: i32,
     pub(crate) stats: bool,
+    /// Current appearance, and the user's explicit choice (None: following the desktop).
+    pub(crate) dark: bool,
+    pub(crate) dark_chosen: Option<bool>,
 }
 
 pub(crate) struct LinkCtx {

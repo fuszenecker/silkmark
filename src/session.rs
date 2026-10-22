@@ -25,6 +25,8 @@ pub struct Session {
     pub tree_contents_open: bool,
     pub tree_links_open: bool,
     pub tabs: Vec<SessionTab>,
+    /// The appearance the user chose with Ctrl+Shift+D; None follows the desktop.
+    pub dark: Option<bool>,
 }
 
 impl Default for Session {
@@ -38,6 +40,7 @@ impl Default for Session {
             tree_contents_open: true,
             tree_links_open: true,
             tabs: Vec::new(),
+            dark: None,
         }
     }
 }
@@ -123,6 +126,13 @@ fn parse_text(text: &str) -> Session {
                 session.tree_contents_open = values.next() != Some("0");
                 session.tree_links_open = values.next() != Some("0");
             }
+            "theme" => {
+                session.dark = parts.next().and_then(|v| match v {
+                    "dark" => Some(true),
+                    "light" => Some(false),
+                    _ => None,
+                })
+            }
             "scroll" => block_positions = parts.next() == Some("blocks"),
             "tab" if session.tabs.len() < MAX_SESSION_TABS => {
                 let position = parts.next().and_then(|value| value.parse::<f64>().ok()).map(sanitize_scroll).unwrap_or(0.0);
@@ -162,6 +172,9 @@ pub fn save(s: &Session) -> Result<(), String> {
         s.height.clamp(240, MAX_WINDOW_DIMENSION)
     ));
     out.push_str("scroll\tblocks\n");
+    if let Some(dark) = s.dark {
+        out.push_str(if dark { "theme\tdark\n" } else { "theme\tlight\n" });
+    }
     out.push_str(&format!("active\t{}\n", s.active));
     out.push_str(&format!("sidebar\t{}\n", if s.sidebar_visible { 1 } else { 0 }));
     out.push_str(&format!(
@@ -197,6 +210,14 @@ mod tests {
         assert_eq!(old.tabs[0].position, 0.0);
         let new = parse_text("scroll\tblocks\ntab\t42.250\tfile:///tmp/a.md\n");
         assert_eq!(new.tabs[0].position, 42.25);
+    }
+
+    #[test]
+    fn remembers_the_chosen_appearance() {
+        assert_eq!(parse_text("theme\tdark\n").dark, Some(true));
+        assert_eq!(parse_text("theme\tlight\n").dark, Some(false));
+        assert_eq!(parse_text("theme\tpurple\n").dark, None);
+        assert_eq!(parse_text("").dark, None);
     }
 
     #[test]

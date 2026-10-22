@@ -59,6 +59,15 @@ pub struct GTimeVal {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
+pub struct GdkRGBA {
+    pub red: f32,
+    pub green: f32,
+    pub blue: f32,
+    pub alpha: f32,
+}
+
+#[repr(C)]
 #[derive(Default, Clone, Copy)]
 pub struct GraphenePoint {
     pub x: f32,
@@ -256,6 +265,7 @@ unsafe extern "C" {
         minimum_baseline: *mut c_int,
         natural_baseline: *mut c_int,
     );
+    pub fn gtk_widget_get_color(widget: *mut GtkWidget, color: *mut GdkRGBA);
     pub fn gtk_widget_compute_point(
         widget: *mut GtkWidget,
         target: *mut GtkWidget,

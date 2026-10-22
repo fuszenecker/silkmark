@@ -13,6 +13,7 @@ mod mermaid;
 mod net;
 mod session;
 mod storage;
+mod theme;
 
 use ffi::*;
 use std::ffi::{CStr, CString, c_void};
@@ -371,6 +372,10 @@ unsafe extern "C" fn on_key(
     let ctrl = state & GDK_CONTROL_MASK != 0;
     let shift = state & GDK_SHIFT_MASK != 0;
     let alt = state & GDK_ALT_MASK != 0;
+    if ctrl && shift && (keyval == 0x0064 || keyval == 0x0044) {
+        app.toggle_dark();
+        return 1;
+    }
     if ctrl && shift && (keyval == 0x0074 || keyval == 0x0054) {
         app.reopen_closed_tab();
         return 1;
@@ -521,13 +526,16 @@ const ICON_PLUS: usize = 5;
 const ICON_CLOSE: usize = 6;
 const ICON_BOOKMARK: usize = 7;
 
-unsafe extern "C" fn draw_icon(_area: *mut GtkDrawingArea, cr: *mut cairo_t, width: i32, height: i32, data: *mut c_void) {
+unsafe extern "C" fn draw_icon(area: *mut GtkDrawingArea, cr: *mut cairo_t, width: i32, height: i32, data: *mut c_void) {
     let kind = data as usize;
     let w = width as f64;
     let h = height as f64;
     let cx = w * 0.5;
     let cy = h * 0.5;
-    cairo_set_source_rgba(cr, 0.30, 0.32, 0.35, 1.0);
+    // Draw in the button's text color so the icons follow the light and dark appearance.
+    let mut color = GdkRGBA { red: 0.30, green: 0.32, blue: 0.35, alpha: 1.0 };
+    gtk_widget_get_color(area as *mut GtkWidget, &mut color);
+    cairo_set_source_rgba(cr, color.red as f64, color.green as f64, color.blue as f64, color.alpha as f64);
     cairo_set_line_width(cr, 1.8);
     match kind {
         ICON_BACK | ICON_FORWARD => {
@@ -912,7 +920,7 @@ unsafe extern "C" fn on_image_zoom(_gesture: *mut GtkGestureClick, _n_press: i32
     gtk_window_present(window as *mut GtkWindow);
 }
 
-unsafe fn show_about_window(_parent: *mut GtkWidget) {
+pub(crate) unsafe fn show_about_window(_parent: *mut GtkWidget) {
     let window = gtk_window_new();
     gtk_window_set_title(window as *mut GtkWindow, c("About SilkMark").as_ptr());
     gtk_window_set_default_size(window as *mut GtkWindow, 520, 360);
@@ -958,6 +966,8 @@ unsafe fn show_about_window(_parent: *mut GtkWidget) {
     gtk_widget_set_tooltip_text(close, c("Close About window").as_ptr());
     gtk_box_append(root as *mut GtkBox, close);
     connect(close, "clicked", on_about_close as *const c_void, window as *mut c_void, None);
+    // The selectable license label would otherwise take the initial focus and show up selected.
+    gtk_window_set_focus(window as *mut GtkWindow, close);
 
     gtk_window_present(window as *mut GtkWindow);
 }
@@ -1002,8 +1012,8 @@ usage: silkmark [options] [URL-or-file ...]",
 --offline                  do not use the network; network resources must be cached
 --clear-cache              remove the persistent SilkMark HTTP cache and exit
 --no-restore               do not restore the previous tabs/session on startup
---theme MODE              reader theme: light, dark or system (default: light)
---system-theme             compatibility alias for --theme system
+--theme MODE              appearance: light, dark or system (default: follow the desktop; Ctrl+Shift+D toggles and is remembered)
+--system-theme             alias for --theme system
 --max-document-mib N       maximum Markdown document size (default: 4 MiB)
 --max-image-mib N          maximum individual image size (default: 12 MiB)
 --max-redirects N          maximum HTTPS redirects (default: 8, maximum: 64)
@@ -1025,7 +1035,8 @@ Each URL or local Markdown path opens in its own tab. Relative links and images 
 
     let mut verbose = false;
     let mut stats = false;
-    let mut theme = String::from("light");
+    let mut theme = String::from("system");
+    let mut theme_given = false;
     let mut no_restore = false;
     let mut disk_cache = false;
     let mut offline = false;
@@ -1052,7 +1063,10 @@ Each URL or local Markdown path opens in its own tab. Relative links and images 
         match raw_args[i].as_str() {
             "-v" | "--verbose" => verbose = true,
             "--stats" => stats = true,
-            "--system-theme" => theme = String::from("system"),
+            "--system-theme" => {
+                theme = String::from("system");
+                theme_given = true;
+            }
             "--no-restore" => no_restore = true,
             "--disk-cache" => disk_cache = true,
             "--offline" => {
@@ -1071,7 +1085,10 @@ Each URL or local Markdown path opens in its own tab. Relative links and images 
                 i += 1;
                 let value = &raw_args[i];
                 match name.as_str() {
-                    "--theme" => theme = value.to_ascii_lowercase(),
+                    "--theme" => {
+                        theme = value.to_ascii_lowercase();
+                        theme_given = true;
+                    }
                     "--max-document-mib" => document_mib = parse_num(&name, value),
                     "--max-image-mib" => image_mib = parse_num(&name, value),
                     "--max-redirects" => max_redirects = parse_num(&name, value),
@@ -1124,29 +1141,22 @@ Each URL or local Markdown path opens in its own tab. Relative links and images 
     net::set_limits(document_mib, image_mib, max_redirects, connect_timeout, total_timeout);
     net::set_allowed_hosts(allow_hosts);
     let restore_state = if !no_restore && start_urls.is_empty() { session::load() } else { None };
-    match theme.as_str() {
-        "light" => {
-            if std::env::var_os("GTK_THEME").is_none() {
-                unsafe {
-                    std::env::set_var("GTK_THEME", "Adwaita");
-                }
-            }
-        }
-        "dark" => {
-            if std::env::var_os("GTK_THEME").is_none() {
-                unsafe {
-                    std::env::set_var("GTK_THEME", "Adwaita:dark");
-                }
-            }
-        }
-        "system" => {}
-        _ => {
-            eprintln!("--theme must be light, dark or system");
-            std::process::exit(2);
-        }
+    if !matches!(theme.as_str(), "light" | "dark" | "system") {
+        eprintln!("--theme must be light, dark or system");
+        std::process::exit(2);
     }
     unsafe {
         gtk_init();
+        // A flag wins, then the choice remembered by Ctrl+Shift+D, then the desktop's preference.
+        let saved_dark = session::load().and_then(|s| s.dark);
+        let remembered = if theme_given { None } else { saved_dark };
+        let dark = match (theme.as_str(), remembered) {
+            ("light", _) => false,
+            ("dark", _) => true,
+            (_, Some(dark)) => dark,
+            _ => theme::system_prefers_dark(),
+        };
+        theme::apply(dark);
         install_embedded_css();
         let main_loop = g_main_loop_new(ptr::null_mut(), 0);
         let window = gtk_window_new();
@@ -1219,6 +1229,8 @@ Each URL or local Markdown path opens in its own tab. Relative links and images 
         let widgets = AppWidgets { window, notebook, entry, status, find_bar, find_entry, find_count };
         let app = Box::new(App::new(widgets, main_loop, verbose, stats));
         let app_ptr = Box::into_raw(app);
+        (*app_ptr).dark = dark;
+        (*app_ptr).dark_chosen = remembered;
         if let Some(state) = restore_state {
             (*app_ptr).sidebar_visible = state.sidebar_visible;
             (*app_ptr).tree_bookmarks_open = state.tree_bookmarks_open;
