@@ -20,6 +20,24 @@ impl App {
         self.active = idx;
         self.sync_active();
     }
+    pub(crate) unsafe fn scroll_document_pages(&mut self, pages: f64) {
+        self.scroll_document_by(|page_size| pages * page_size);
+    }
+    pub(crate) unsafe fn scroll_document_pixels(&mut self, pixels: f64) {
+        self.scroll_document_by(|_| pixels);
+    }
+    unsafe fn scroll_document_by(&mut self, delta: impl Fn(f64) -> f64) {
+        if self.active >= self.tabs.len() {
+            return;
+        }
+        let adj = gtk_scrolled_window_get_vadjustment(self.tabs[self.active].doc_scroll as *mut GtkScrolledWindow);
+        if adj.is_null() {
+            return;
+        }
+        let max = (gtk_adjustment_get_upper(adj) - gtk_adjustment_get_page_size(adj)).max(0.0);
+        let next = gtk_adjustment_get_value(adj) + delta(gtk_adjustment_get_page_size(adj));
+        gtk_adjustment_set_value(adj, next.clamp(0.0, max));
+    }
     pub(crate) unsafe fn scroll_document_edge(&mut self, bottom: bool) {
         if self.active >= self.tabs.len() {
             return;
@@ -274,7 +292,7 @@ impl App {
                 None => "Document top".into(),
             };
             self.scroll_to_target(tab);
-            self.render_tree(tab);
+            self.update_tree_current(tab);
             if tab == self.active {
                 self.sync_active();
             }

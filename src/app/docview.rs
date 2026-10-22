@@ -237,22 +237,38 @@ impl App {
     pub(crate) unsafe fn reading_position(&self, idx: usize) -> f64 {
         let tab = &self.tabs[idx];
         let bound = &(*tab.doc_ctx).bound;
-        let origin = GraphenePoint::default();
-        let mut top: Option<(usize, f64)> = None;
-        for row in bound {
-            let mut out = GraphenePoint::default();
-            if gtk_widget_compute_point(row.widget, tab.doc_view, &origin, &mut out) == 0 {
-                continue;
-            }
-            let height = (gtk_widget_get_height(row.widget) as f64).max(1.0);
-            // Rows kept above the viewport are bound too; only count the ones still showing.
-            if out.y as f64 + height > 0.0 && top.is_none_or(|(block, _)| row.block < block) {
-                top = Some((row.block, ((-out.y as f64) / height).clamp(0.0, 0.999)));
+        let x = gtk_widget_get_width(tab.doc_view) as f64 / 2.0;
+        // GTK keeps recycled rows bound with stale positions, so ask what is actually on
+        // screen near the top edge instead of trusting every bound row.
+        for probe in [2.0, 10.0, 24.0, 48.0] {
+            let mut widget = gtk_widget_pick(tab.doc_view, x, probe, 0);
+            while !widget.is_null() {
+                if let Some(row) = bound.iter().find(|b| b.widget == widget) {
+                    let height = gtk_widget_get_height(row.widget) as f64;
+                    let mut out = GraphenePoint::default();
+                    let origin = GraphenePoint::default();
+                    if height > 0.0 && gtk_widget_compute_point(row.widget, tab.doc_view, &origin, &mut out) != 0 {
+                        return row.block as f64 + ((-out.y as f64) / height).clamp(0.0, 0.999);
+                    }
+                    break;
+                }
+                widget = gtk_widget_get_parent(widget);
             }
         }
-        match top {
-            Some((block, fraction)) => block as f64 + fraction,
-            None => tab.restore_scroll.unwrap_or(0.0),
+        tab.restore_scroll.unwrap_or(0.0)
+    }
+
+    /// After a page loads the focus would otherwise stay in the address bar, where Space,
+    /// Page Down and the arrow keys edit the URL instead of scrolling the page.
+    pub(crate) unsafe fn focus_document_if_idle(&mut self, idx: usize) {
+        if idx != self.active || gtk_widget_has_focus(self.entry) == 0 {
+            return;
+        }
+        let text = gtk_editable_get_text(self.entry as *mut GtkEditable);
+        let typed = if text.is_null() { String::new() } else { CStr::from_ptr(text).to_string_lossy().into_owned() };
+        // An address that differs from the page's URL is being edited: leave it alone.
+        if typed == self.tabs[idx].url || typed.is_empty() {
+            gtk_widget_grab_focus(self.tabs[idx].doc_view);
         }
     }
 

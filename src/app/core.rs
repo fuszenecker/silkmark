@@ -46,6 +46,8 @@ impl App {
         gtk_widget_set_margin_end(tree_box, 8);
         gtk_widget_set_margin_top(tree_box, 8);
         gtk_widget_set_margin_bottom(tree_box, 8);
+        // Long titles are ellipsized, so the sidebar never needs a horizontal scrollbar.
+        gtk_scrolled_window_set_policy(tree_scroll as *mut GtkScrolledWindow, GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
         gtk_scrolled_window_set_child(tree_scroll as *mut GtkScrolledWindow, tree_box);
         gtk_widget_set_size_request(tree_scroll, 230, -1);
 
@@ -91,6 +93,7 @@ impl App {
             page: paned,
             tree_scroll,
             tree_box,
+            tree_items: Vec::new(),
             doc_view,
             doc_ctx,
             doc_scroll,

@@ -353,6 +353,10 @@ unsafe extern "C" fn on_find_close(_w: *mut GtkWidget, data: *mut c_void) {
     (&mut *(data as *mut App)).hide_find();
 }
 
+/// Space/Shift+Space scroll by this fraction of a page, j/k by this many pixels.
+const SCROLL_PAGE: f64 = 0.9;
+const SCROLL_LINE: f64 = 60.0;
+
 unsafe extern "C" fn on_key(
     _controller: *mut GtkEventControllerKey,
     keyval: u32,
@@ -469,6 +473,27 @@ unsafe extern "C" fn on_key(
         app.show_find();
         app.g_pending = false;
         return 1;
+    }
+    if !editing_text && !ctrl && !alt {
+        let handled = match keyval {
+            0x0020 => {
+                app.scroll_document_pages(if shift { -SCROLL_PAGE } else { SCROLL_PAGE });
+                true
+            }
+            0x006a => {
+                app.scroll_document_pixels(SCROLL_LINE);
+                true
+            }
+            0x006b => {
+                app.scroll_document_pixels(-SCROLL_LINE);
+                true
+            }
+            _ => false,
+        };
+        if handled {
+            app.g_pending = false;
+            return 1;
+        }
     }
     if !editing_text && !ctrl && !alt && keyval == 0x0047 {
         app.scroll_document_edge(true);
@@ -609,6 +634,8 @@ unsafe fn install_embedded_css() {
         .sidebar { background: alpha(@theme_fg_color, 0.035); }
         .tree-link { padding: 5px 8px; border: none; box-shadow: none; background: transparent; }
         .tree-link:hover { background: alpha(@theme_selected_bg_color, 0.14); }
+        .tree-top { font-weight: 700; }
+        .tree-current { background: alpha(@theme_selected_bg_color, 0.22); }
         .searchbar { padding: 2px 8px; }
         .search-hit { background: alpha(#f6c344, 0.20); border-radius: 4px; }
         .search-current { background: alpha(#f6c344, 0.48); }
@@ -1186,6 +1213,8 @@ Each URL or local Markdown path opens in its own tab. Relative links and images 
         gtk_box_append(root as *mut GtkBox, status);
 
         let controller = gtk_event_controller_key_new();
+        // Capture phase: the document list view would otherwise consume Space and similar keys first.
+        gtk_event_controller_set_propagation_phase(controller, GTK_PHASE_CAPTURE);
         gtk_widget_add_controller(window, controller);
         let widgets = AppWidgets { window, notebook, entry, status, find_bar, find_entry, find_count };
         let app = Box::new(App::new(widgets, main_loop, verbose, stats));

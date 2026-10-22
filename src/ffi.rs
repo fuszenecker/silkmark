@@ -67,6 +67,9 @@ pub struct GraphenePoint {
 
 pub const GTK_ORIENTATION_HORIZONTAL: c_int = 0;
 pub const GTK_ORIENTATION_VERTICAL: c_int = 1;
+pub const GTK_PHASE_CAPTURE: c_int = 1;
+pub const GTK_ALIGN_START: c_int = 1;
+pub const PANGO_ELLIPSIZE_END: c_int = 3;
 pub const GTK_POLICY_AUTOMATIC: c_int = 1;
 pub const GTK_POLICY_NEVER: c_int = 2;
 pub const GTK_STYLE_PROVIDER_PRIORITY_APPLICATION: c_uint = 600;
@@ -176,6 +179,7 @@ unsafe extern "C" {
     pub fn gtk_widget_set_tooltip_text(widget: *mut GtkWidget, text: *const c_char);
 
     pub fn gtk_event_controller_key_new() -> *mut GtkEventController;
+    pub fn gtk_event_controller_set_propagation_phase(controller: *mut GtkEventController, phase: c_int);
     pub fn gtk_gesture_click_new() -> *mut GtkGestureClick;
     pub fn gdk_display_get_default() -> *mut GdkDisplay;
     pub fn gdk_display_get_clipboard(display: *mut GdkDisplay) -> *mut GdkClipboard;
@@ -237,7 +241,11 @@ unsafe extern "C" {
     pub fn gtk_list_item_set_child(item: *mut GtkListItem, child: *mut GtkWidget);
     pub fn gtk_list_item_get_position(item: *mut GtkListItem) -> guint;
     pub fn gtk_list_item_set_activatable(item: *mut GtkListItem, activatable: gboolean);
+    pub fn gtk_button_get_child(button: *mut GtkButton) -> *mut GtkWidget;
+    pub fn gtk_label_set_ellipsize(label: *mut GtkLabel, mode: c_int);
+    pub fn gtk_widget_set_halign(widget: *mut GtkWidget, align: c_int);
     pub fn gtk_list_item_set_selectable(item: *mut GtkListItem, selectable: gboolean);
+    pub fn gtk_widget_pick(widget: *mut GtkWidget, x: c_double, y: c_double, flags: c_int) -> *mut GtkWidget;
     pub fn gtk_widget_compute_point(
         widget: *mut GtkWidget,
         target: *mut GtkWidget,

@@ -79,6 +79,8 @@ pub(crate) struct Tab {
     pub(crate) page: *mut GtkWidget,
     pub(crate) tree_scroll: *mut GtkWidget,
     pub(crate) tree_box: *mut GtkWidget,
+    /// Contents buttons by heading anchor, valid until the sidebar is rebuilt.
+    pub(crate) tree_items: Vec<(String, *mut GtkWidget)>,
     pub(crate) doc_view: *mut GtkWidget,
     pub(crate) doc_ctx: *mut docview::DocViewCtx,
     pub(crate) doc_scroll: *mut GtkWidget,
