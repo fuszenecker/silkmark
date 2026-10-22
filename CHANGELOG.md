@@ -2,6 +2,11 @@
 
 - treat an unescaped trailing backslash as a CommonMark hard line break
 - keep list items indented four or more columns as nested list items instead of indented code blocks
+- virtualize the document view: a `GtkListView` creates widgets only for visible blocks instead of one label per line (book-length documents open in tens of milliseconds and use about half the memory)
+- fetch and parse documents on the worker thread; the UI thread no longer parses
+- find no longer re-renders the document: hits are counted from a precomputed text index and only visible rows are rebuilt
+- same-document fragment links just scroll; section jumps and restored positions now scroll reliably in long documents
+- store the session reading position as block index plus fraction; older pixel offsets are ignored
 - add `docs/proposals-book-reading.md` with proposals for book-length documents
 
 ## 1.0.5

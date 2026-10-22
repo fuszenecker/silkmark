@@ -65,6 +65,7 @@ pub struct Line {
 pub struct Document {
     pub lines: Vec<Line>,
     pub links: Vec<Link>,
+    pub index: BlockIndex,
 }
 
 fn plain_line(style: Style, markup: String) -> Line {
@@ -552,6 +553,7 @@ pub fn parse(src: &str) -> Document {
             }
         }
     }
+    doc.index = BlockIndex::build(&doc.lines);
     doc
 }
 
@@ -915,7 +917,9 @@ fn parse_ordered_item(s: &str) -> Option<(u32, &str)> {
     Some((n, body))
 }
 
+mod blocks;
 mod inline;
+pub use blocks::{Block, BlockIndex, count_hits};
 use inline::{
     escape_attr, escape_markup, is_table_row, is_table_separator, parse_image_with_refs, parse_inline_ctx,
     parse_table_alignments, parse_table_cells, parse_table_markup,

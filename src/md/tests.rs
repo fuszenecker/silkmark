@@ -663,4 +663,40 @@ mod commonmark_v1_release_tests {
         // A real indented code block after a blank line is still code.
         assert!(parse("- a\n\n        code").lines.iter().any(|l| matches!(l.style, Style::Code)));
     }
+
+    #[test]
+    fn blocks_group_tables_and_skip_unrenderable_lines() {
+        let d = parse("intro\n\n| a | b |\n| --- | --- |\n| 1 | 2 |\n| 3 | 4 |\n\noutro");
+        let kinds: Vec<_> = d.index.blocks.iter().map(|b| matches!(b, Block::Table { .. })).collect();
+        assert_eq!(kinds.iter().filter(|t| **t).count(), 1);
+        let Some(Block::Table { first, end }) = d.index.blocks.iter().copied().find(|b| matches!(b, Block::Table { .. })) else {
+            panic!("no table block");
+        };
+        assert_eq!(end - first, 4, "header, separator and two body rows");
+        assert_eq!(d.index.blocks.len(), d.index.search_text.len());
+    }
+
+    #[test]
+    fn block_anchors_point_at_the_block_holding_them() {
+        let d = parse("# Top\n\ntext\n\n## Second part\n\nmore");
+        let at = d.index.anchors["second_part"];
+        let Block::Line(i) = d.index.blocks[at] else { panic!("heading is a line block") };
+        assert!(matches!(d.lines[i].style, Style::H2));
+        assert_eq!(d.index.anchors["top"], 0);
+    }
+
+    #[test]
+    fn search_hits_count_table_cells_separately() {
+        let d = parse("Hello World\n\n| Hello | x |\n| --- | --- |\n| hello | Hello |");
+        let hits: Vec<usize> = d
+            .index
+            .blocks
+            .iter()
+            .zip(&d.index.search_text)
+            .map(|(b, t)| count_hits(t, "hello", matches!(b, Block::Table { .. })))
+            .collect();
+        // The blank line between the paragraph and the table is a block of its own.
+        assert_eq!(hits, [1, 0, 3]);
+        assert_eq!(count_hits("anything", "", false), 0);
+    }
 }

@@ -11,7 +11,8 @@ const MAX_WINDOW_DIMENSION: i32 = 16_384;
 #[derive(Clone, Debug)]
 pub struct SessionTab {
     pub url: String,
-    pub scroll_y: f64,
+    /// Reading position as `block index + fraction of that block already scrolled past`.
+    pub position: f64,
 }
 
 #[derive(Clone, Debug)]
@@ -95,6 +96,8 @@ fn sanitize_scroll(value: f64) -> f64 {
 
 fn parse_text(text: &str) -> Session {
     let mut session = Session::default();
+    // Older files stored a pixel offset, which means nothing for a virtualized view.
+    let mut block_positions = false;
     for line in text.lines().filter(|line| line.len() <= MAX_SESSION_LINE_LEN) {
         let mut parts = line.splitn(3, '\t');
         let Some(kind) = parts.next() else {
@@ -120,14 +123,20 @@ fn parse_text(text: &str) -> Session {
                 session.tree_contents_open = values.next() != Some("0");
                 session.tree_links_open = values.next() != Some("0");
             }
+            "scroll" => block_positions = parts.next() == Some("blocks"),
             "tab" if session.tabs.len() < MAX_SESSION_TABS => {
-                let scroll_y = parts.next().and_then(|value| value.parse::<f64>().ok()).map(sanitize_scroll).unwrap_or(0.0);
+                let position = parts.next().and_then(|value| value.parse::<f64>().ok()).map(sanitize_scroll).unwrap_or(0.0);
                 let url = unesc(parts.next().unwrap_or(""));
                 if !url.is_empty() {
-                    session.tabs.push(SessionTab { url, scroll_y });
+                    session.tabs.push(SessionTab { url, position });
                 }
             }
             _ => {}
+        }
+    }
+    if !block_positions {
+        for tab in &mut session.tabs {
+            tab.position = 0.0;
         }
     }
     if session.tabs.is_empty() {
@@ -152,6 +161,7 @@ pub fn save(s: &Session) -> Result<(), String> {
         s.width.clamp(320, MAX_WINDOW_DIMENSION),
         s.height.clamp(240, MAX_WINDOW_DIMENSION)
     ));
+    out.push_str("scroll\tblocks\n");
     out.push_str(&format!("active\t{}\n", s.active));
     out.push_str(&format!("sidebar\t{}\n", if s.sidebar_visible { 1 } else { 0 }));
     out.push_str(&format!(
@@ -162,7 +172,7 @@ pub fn save(s: &Session) -> Result<(), String> {
     ));
     for tab in s.tabs.iter().take(MAX_SESSION_TABS) {
         if !tab.url.is_empty() {
-            out.push_str(&format!("tab\t{:.3}\t{}\n", sanitize_scroll(tab.scroll_y), esc(&tab.url)));
+            out.push_str(&format!("tab\t{:.3}\t{}\n", sanitize_scroll(tab.position), esc(&tab.url)));
         }
     }
     storage::atomic_write(&dir.join("session.tsv"), out.as_bytes()).map_err(|e| format!("Cannot save session: {e}"))
@@ -178,7 +188,15 @@ mod tests {
         assert_eq!(session.width, 320);
         assert_eq!(session.height, MAX_WINDOW_DIMENSION);
         assert_eq!(session.active, 0);
-        assert_eq!(session.tabs[0].scroll_y, 0.0);
+        assert_eq!(session.tabs[0].position, 0.0);
+    }
+
+    #[test]
+    fn pixel_offsets_from_older_sessions_are_dropped() {
+        let old = parse_text("tab\t164263.000\tfile:///tmp/a.md\n");
+        assert_eq!(old.tabs[0].position, 0.0);
+        let new = parse_text("scroll\tblocks\ntab\t42.250\tfile:///tmp/a.md\n");
+        assert_eq!(new.tabs[0].position, 42.25);
     }
 
     #[test]

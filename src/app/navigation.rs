@@ -110,9 +110,12 @@ impl App {
             return;
         }
         let q = CStr::from_ptr(p).to_string_lossy().into_owned();
-        self.tabs[self.active].search = q;
-        self.tabs[self.active].search_index = 0;
-        self.render_tab(self.active);
+        let tab = self.active;
+        self.tabs[tab].search = q;
+        self.tabs[tab].search_index = 0;
+        self.recompute_search(tab);
+        self.refresh_rows(tab);
+        self.scroll_to_target(tab);
         self.update_find_count();
     }
     pub(crate) unsafe fn find_step(&mut self, forward: bool) {
@@ -129,7 +132,9 @@ impl App {
         } else {
             self.tabs[self.active].search_index = (self.tabs[self.active].search_index + hits - 1) % hits;
         }
-        self.render_tab(self.active);
+        let tab = self.active;
+        self.refresh_rows(tab);
+        self.scroll_to_target(tab);
         self.update_find_count();
     }
     pub(crate) unsafe fn copy_text(&mut self, text: &str) {
@@ -268,7 +273,8 @@ impl App {
                 Some(id) => format!("Section #{id}"),
                 None => "Document top".into(),
             };
-            self.render_tab(tab);
+            self.scroll_to_target(tab);
+            self.render_tree(tab);
             if tab == self.active {
                 self.sync_active();
             }
@@ -291,7 +297,13 @@ impl App {
         let requested = url.clone();
         let fetch_url = md::document_url(&url);
         thread::spawn(move || {
-            let _ = tx.send(net::fetch(&fetch_url));
+            // Parsing is pure Rust, so it runs here and the UI thread only receives the finished model.
+            let result = net::fetch(&fetch_url).map(|(final_url, src)| {
+                let parse_started = Instant::now();
+                let doc = md::parse(&src);
+                Fetched { final_url, doc, source_bytes: src.len(), parse_elapsed: parse_started.elapsed() }
+            });
+            let _ = tx.send(result);
         });
         self.pending.push(Pending { tab, requested, rx });
     }

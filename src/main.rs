@@ -155,21 +155,6 @@ unsafe extern "C" fn on_inline_link(_label: *mut GtkLabel, uri: *const i8, data:
     (*(data as *mut App)).open_link(target);
     1
 }
-unsafe extern "C" fn focus_anchor_idle(data: *mut c_void) -> gboolean {
-    if data.is_null() {
-        return 0;
-    }
-    let widget = data as *mut GtkWidget;
-    // A strong GObject reference keeps the widget alive, but it may have been
-    // detached by a newer render before this idle callback runs. GTK focus
-    // operations require a rooted widget, so never focus a stale subtree.
-    let root = gtk_widget_get_root(widget);
-    if !root.is_null() {
-        let _ = gtk_widget_grab_focus(widget);
-    }
-    g_object_unref(data);
-    0
-}
 unsafe extern "C" fn on_back(_b: *mut GtkButton, data: *mut c_void) {
     if data.is_null() {
         return;
@@ -341,7 +326,6 @@ unsafe extern "C" fn on_tick(data: *mut c_void) -> gboolean {
     }
     let app = &mut *(data as *mut App);
     app.poll();
-    app.apply_pending_scrolls();
     1
 }
 unsafe extern "C" fn on_find_changed(_w: *mut GtkWidget, data: *mut c_void) {
@@ -595,7 +579,7 @@ unsafe fn install_embedded_css() {
         .tab-close { min-width: 22px; min-height: 22px; padding: 0; margin: 0; }
         .tab-title { margin: 0 2px; }
         .urlbar { border-radius: 8px; padding: 4px 8px; }
-        .document { font-family: Sans; font-size: 11pt; }
+        .document { font-family: Sans; font-size: 11pt; color: @theme_fg_color; }
         .md-text, .md-bullet, .md-task, .md-footnote { margin: 4px 0; }
         .md-quote { margin: 7px 0; }
         .md-math { margin: 8px 18px; padding: 8px 12px; font-family: serif; font-size: 15pt; }
@@ -614,6 +598,7 @@ unsafe fn install_embedded_css() {
         .md-table-cell { background: @theme_base_color; padding: 6px 9px; }
         .md-table-row { padding: 3px 7px; }
         .md-table-sep { min-height: 1px; opacity: 0.25; }
+        .document > row, .document > row:hover, .document > row:focus-within { padding: 0; min-height: 0; background: none; outline: none; }
         .md-rule { opacity: 0.25; margin: 14px 0; }
         .md-image-wrap { margin: 12px 0 18px 0; }
         .md-image-caption { opacity: 0.62; font-size: 9pt; }
@@ -1216,7 +1201,7 @@ Each URL or local Markdown path opens in its own tab. Relative links and images 
                 for st in state.tabs {
                     (*app_ptr).add_tab();
                     let tab = (*app_ptr).active;
-                    (&mut (*app_ptr).tabs)[tab].restore_scroll = Some(st.scroll_y);
+                    (&mut (*app_ptr).tabs)[tab].restore_scroll = Some(st.position);
                     (*app_ptr).navigate(tab, st.url, false, true);
                 }
                 (*app_ptr).active = state.active.min((*app_ptr).tabs.len() - 1);

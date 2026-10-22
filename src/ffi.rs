@@ -24,6 +24,12 @@ pub enum GtkGestureClick {}
 pub enum GtkDrawingArea {}
 pub enum GtkCssProvider {}
 pub enum GtkPicture {}
+pub enum GtkListView {}
+pub enum GtkListItem {}
+pub enum GtkListItemFactory {}
+pub enum GtkNoSelection {}
+pub enum GtkStringList {}
+pub enum GListModel {}
 pub enum GdkPixbufLoader {}
 pub enum GdkPixbuf {}
 pub enum GdkPixbufAnimation {}
@@ -50,6 +56,13 @@ pub struct CairoTextExtents {
 pub struct GTimeVal {
     pub tv_sec: c_long,
     pub tv_usec: c_long,
+}
+
+#[repr(C)]
+#[derive(Default, Clone, Copy)]
+pub struct GraphenePoint {
+    pub x: f32,
+    pub y: f32,
 }
 
 pub const GTK_ORIENTATION_HORIZONTAL: c_int = 0;
@@ -150,7 +163,6 @@ unsafe extern "C" {
     pub fn gtk_widget_set_margin_top(widget: *mut GtkWidget, margin: c_int);
     pub fn gtk_widget_set_margin_bottom(widget: *mut GtkWidget, margin: c_int);
     pub fn gtk_widget_set_visible(widget: *mut GtkWidget, visible: gboolean);
-    pub fn gtk_widget_set_focusable(widget: *mut GtkWidget, focusable: gboolean);
     pub fn gtk_widget_get_first_child(widget: *mut GtkWidget) -> *mut GtkWidget;
     pub fn gtk_widget_get_parent(widget: *mut GtkWidget) -> *mut GtkWidget;
     pub fn gtk_widget_get_root(widget: *mut GtkWidget) -> *mut GtkRoot;
@@ -187,7 +199,6 @@ unsafe extern "C" {
 #[link(name = "glib-2.0")]
 unsafe extern "C" {
     pub fn g_timeout_add(interval: guint, function: unsafe extern "C" fn(gpointer) -> gboolean, data: gpointer) -> guint;
-    pub fn g_idle_add(function: unsafe extern "C" fn(gpointer) -> gboolean, data: gpointer) -> guint;
     pub fn g_main_loop_new(context: gpointer, is_running: gboolean) -> *mut GMainLoop;
     pub fn g_main_loop_run(loop_: *mut GMainLoop);
     pub fn g_main_loop_quit(loop_: *mut GMainLoop);
@@ -214,6 +225,25 @@ unsafe extern "C" {
     pub fn cairo_set_font_size(cr: *mut cairo_t, size: c_double);
     pub fn cairo_show_text(cr: *mut cairo_t, utf8: *const c_char);
     pub fn cairo_text_extents(cr: *mut cairo_t, utf8: *const c_char, extents: *mut CairoTextExtents);
+}
+
+#[link(name = "gtk-4")]
+unsafe extern "C" {
+    pub fn gtk_list_view_new(model: *mut GtkNoSelection, factory: *mut GtkListItemFactory) -> *mut GtkWidget;
+    pub fn gtk_list_view_set_model(list_view: *mut GtkListView, model: *mut GtkNoSelection);
+    pub fn gtk_signal_list_item_factory_new() -> *mut GtkListItemFactory;
+    pub fn gtk_no_selection_new(model: *mut GListModel) -> *mut GtkNoSelection;
+    pub fn gtk_string_list_new(strings: *const *const c_char) -> *mut GtkStringList;
+    pub fn gtk_list_item_set_child(item: *mut GtkListItem, child: *mut GtkWidget);
+    pub fn gtk_list_item_get_position(item: *mut GtkListItem) -> guint;
+    pub fn gtk_list_item_set_activatable(item: *mut GtkListItem, activatable: gboolean);
+    pub fn gtk_list_item_set_selectable(item: *mut GtkListItem, selectable: gboolean);
+    pub fn gtk_widget_compute_point(
+        widget: *mut GtkWidget,
+        target: *mut GtkWidget,
+        point: *const GraphenePoint,
+        out_point: *mut GraphenePoint,
+    ) -> gboolean;
 }
 
 #[link(name = "gtk-4")]

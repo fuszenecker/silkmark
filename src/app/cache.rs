@@ -104,11 +104,7 @@ impl App {
                         continue;
                     }
                     match result {
-                        Ok((final_url, src)) => {
-                            let parse_started = Instant::now();
-                            let source_bytes = src.len();
-                            let doc = md::parse(&src);
-                            let parse_elapsed = parse_started.elapsed();
+                        Ok(Fetched { final_url, doc, source_bytes, parse_elapsed }) => {
                             if self.stats {
                                 let heading_count = doc
                                     .lines
