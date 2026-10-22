@@ -37,6 +37,14 @@ Parsing is not a problem: both documents parse in 40–60 ms (release build).
 
    Chunked rendering was not needed on top of this: rows are built on demand.
 
+   Scrolling needed a second fix. The first virtualized version opened fast but stuttered
+   while scrolling (frame clock, 10 000 px scrolled in 16 ms steps: 95th percentile 117 ms,
+   60 frames over 25 ms; the old non-virtualized build: 17 ms, 3 frames). GTK kept rebinding
+   the same rows (a block was bound 6 times on average) and each bind built a new widget.
+   Caching the row widgets brought it to 17 ms and 1 slow frame. A time-sliced build of the
+   whole document into a box was tried too: the window stayed responsive but building the
+   widgets for the whole book took 7.5 s, so it was dropped.
+
 ## Proposed, not implemented
 
 Ordered by expected value for long books.

@@ -23,7 +23,9 @@
 ## Threading and rendering
 
 - Fetching *and* parsing (`md::parse`, including the block index) run on a worker thread; the UI thread only receives the finished `Document`.
-- GTK widgets are created on the UI thread only, and only for the rows the list view asks for (`bind`) and recycles (`unbind`). Opening a 1 MB document does not build thousands of widgets.
+- GTK widgets are created on the UI thread only, and only for the rows the list view asks for (`bind`). Opening a 1 MB document does not build thousands of widgets.
+- `GtkListView` unbinds and rebinds the same rows many times while scrolling (rows differ a lot in height, so its window of realized rows keeps shifting). Rebuilding a row each time made scrolling stutter, so `DocViewCtx` keeps built row widgets in an LRU cache (`ROW_CACHE`) and reuses them. The cache is dropped when the search highlight changes or a new document is shown.
+- Measure scrolling, not only opening: a smooth-scroll check is a loop that moves the vertical adjustment every 16 ms and records the frame clock deltas.
 - Search counts hits from the precomputed `BlockIndex::search_text`; it never rebuilds the document. Only the visible rows are rebuilt to move the highlight.
 - A reading position is stored as `block index + fraction of the block scrolled past`, because pixel offsets are only estimates in a virtualized list.
 - `gtk_list_view_scroll_to` needs GTK 4.12. It is looked up with `dlsym`; older GTK 4 falls back to an adjustment estimate that the row-alignment step corrects once the row exists.

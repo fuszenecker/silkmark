@@ -7,6 +7,7 @@
 - find no longer re-renders the document: hits are counted from a precomputed text index and only visible rows are rebuilt
 - same-document fragment links just scroll; section jumps and restored positions now scroll reliably in long documents
 - store the session reading position as block index plus fraction; older pixel offsets are ignored
+- fix stuttering when scrolling, tables worst of all: GTK recycles list items constantly and every recycle rebuilt the row; built rows are now cached and reused (frame time while scrolling through the tables: 21 of 61 frames over 25 ms before, 2 of 179 after; 95th percentile 134 ms before, 17 ms after)
 - sidebar: left-aligned tree with indentation, long titles wrap onto further lines instead of being cut, highlight of the current section, no horizontal scrollbar, up to 1000 headings (was 200 and truncated at 34 characters)
 - sidebar no longer jumps to its top when it is rebuilt or when a contents entry is clicked
 - tab titles use the document's first heading, else the decoded file name (no more `%20%E2%80%94`); bookmark titles are decoded too

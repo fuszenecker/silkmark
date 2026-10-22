@@ -5,6 +5,7 @@
 //! so opening or searching a book-length document does not build thousands of widgets.
 use super::*;
 use crate::md::Block;
+use std::collections::{HashMap, VecDeque};
 use std::ffi::{c_char, c_int};
 
 /// A run of search hits inside one block. `first` is the global index of its first hit.
@@ -28,6 +29,64 @@ pub(crate) struct DocViewCtx {
     app: *mut App,
     page: *mut GtkWidget,
     bound: Vec<BoundRow>,
+    /// Row widgets by block, kept (referenced) after their list item let go of them. GTK
+    /// recycles list items constantly while scrolling; rebuilding the same rows each time made
+    /// scrolling stutter, reusing them costs next to nothing.
+    cache: HashMap<usize, (*mut GtkWidget, *mut GtkWidget)>,
+    order: VecDeque<usize>,
+}
+
+const ROW_CACHE: usize = 1500;
+
+impl DocViewCtx {
+    /// The cached widget of a block, built on first use.
+    unsafe fn row(&mut self, app: &mut App, tab: usize, block: usize) -> (*mut GtkWidget, *mut GtkWidget) {
+        if let Some(&(widget, picture)) = self.cache.get(&block) {
+            self.order.retain(|b| *b != block);
+            self.order.push_back(block);
+            return (widget, picture);
+        }
+        let (widget, picture) = app.build_row(tab, block);
+        g_object_ref_sink(widget as *mut c_void);
+        self.cache.insert(block, (widget, picture));
+        self.order.push_back(block);
+        self.evict(app);
+        (widget, picture)
+    }
+
+    /// Drops the oldest cached rows that no list item is showing.
+    unsafe fn evict(&mut self, app: &mut App) {
+        let mut scanned = 0;
+        while self.cache.len() > ROW_CACHE && scanned < self.order.len() {
+            scanned += 1;
+            let Some(block) = self.order.pop_front() else {
+                break;
+            };
+            if self.bound.iter().any(|b| b.block == block) {
+                self.order.push_back(block);
+                continue;
+            }
+            self.forget(app, block);
+        }
+    }
+
+    unsafe fn forget(&mut self, app: &mut App, block: usize) {
+        if let Some((widget, picture)) = self.cache.remove(&block) {
+            self.order.retain(|b| *b != block);
+            if !picture.is_null() {
+                app.release_row_picture(picture);
+            }
+            g_object_unref(widget as *mut c_void);
+        }
+    }
+
+    /// Forgets every row that is not on screen, e.g. after the search highlight changed.
+    unsafe fn forget_unbound(&mut self, app: &mut App) {
+        let stale: Vec<usize> = self.cache.keys().copied().filter(|b| !self.bound.iter().any(|r| r.block == *b)).collect();
+        for block in stale {
+            self.forget(app, block);
+        }
+    }
 }
 
 struct GraphViewCtx {
@@ -130,7 +189,7 @@ unsafe extern "C" fn on_row_bind(_factory: *mut c_void, item: *mut GtkListItem, 
         return;
     };
     let block = gtk_list_item_get_position(item) as usize;
-    let (widget, picture) = app.build_row(tab, block);
+    let (widget, picture) = ctx.row(app, tab, block);
     gtk_list_item_set_child(item, widget);
     ctx.bound.push(BoundRow { block, item, widget, picture });
 }
@@ -141,10 +200,8 @@ unsafe extern "C" fn on_row_unbind(_factory: *mut c_void, item: *mut GtkListItem
     let Some(pos) = ctx.bound.iter().position(|b| b.item == item) else {
         return;
     };
-    let row = ctx.bound.swap_remove(pos);
-    if !ctx.app.is_null() && !row.picture.is_null() {
-        (*ctx.app).release_row_picture(row.picture);
-    }
+    // The cache still holds the widget; the list item only lets go of it.
+    ctx.bound.swap_remove(pos);
 }
 
 struct JumpCtx {
@@ -190,7 +247,7 @@ unsafe extern "C" fn drop_doc_view_ctx(data: *mut c_void, _closure: *mut c_void)
 /// Creates the list view of a tab. The returned context pointer is owned by the factory.
 pub(crate) unsafe fn new_doc_view(app: *mut App, page: *mut GtkWidget) -> (*mut GtkWidget, *mut DocViewCtx) {
     let factory = gtk_signal_list_item_factory_new();
-    let ctx = Box::into_raw(Box::new(DocViewCtx { app, page, bound: Vec::new() }));
+    let ctx = Box::into_raw(Box::new(DocViewCtx { app, page, bound: Vec::new(), cache: HashMap::new(), order: VecDeque::new() }));
     connect(factory as *mut GtkWidget, "setup", on_row_setup as *const c_void, ctx as *mut c_void, None);
     connect(factory as *mut GtkWidget, "bind", on_row_bind as *const c_void, ctx as *mut c_void, None);
     connect(factory as *mut GtkWidget, "unbind", on_row_unbind as *const c_void, ctx as *mut c_void, Some(drop_doc_view_ctx));
@@ -223,7 +280,10 @@ impl App {
     pub(crate) unsafe fn show_document(&mut self, idx: usize) {
         let blocks = self.tabs[idx].doc.index.blocks.len();
         gtk_list_view_set_model(self.tabs[idx].doc_view as *mut GtkListView, empty_model(blocks));
-        // Binding happens lazily from the layout pass, so the tab keeps no row state here.
+        // The old rows were unbound by the new model and belong to the previous document.
+        let ctx = self.tabs[idx].doc_ctx;
+        (*ctx).forget_unbound(self);
+        // Binding happens lazily from the layout pass.
         self.recompute_search(idx);
         match self.tabs[idx].restore_scroll.take() {
             Some(position) if position.floor() < blocks as f64 => {
@@ -373,13 +433,12 @@ impl App {
     /// Rebuilds the visible rows, e.g. after the search highlight moved.
     pub(crate) unsafe fn refresh_rows(&mut self, idx: usize) {
         let ctx = self.tabs[idx].doc_ctx;
-        let rows: Vec<(*mut GtkListItem, usize, *mut GtkWidget)> =
-            (*ctx).bound.iter().map(|b| (b.item, b.block, b.picture)).collect();
-        for (item, block, old_picture) in rows {
-            if !old_picture.is_null() {
-                self.release_row_picture(old_picture);
-            }
-            let (widget, picture) = self.build_row(idx, block);
+        let rows: Vec<(*mut GtkListItem, usize)> = (*ctx).bound.iter().map(|b| (b.item, b.block)).collect();
+        // Cached rows carry the old highlight: drop them, then rebuild what is on screen.
+        (*ctx).forget_unbound(self);
+        for (item, block) in rows {
+            (*ctx).forget(self, block);
+            let (widget, picture) = (*ctx).row(self, idx, block);
             gtk_list_item_set_child(item, widget);
             if let Some(row) = (*ctx).bound.iter_mut().find(|b| b.item == item) {
                 row.picture = picture;

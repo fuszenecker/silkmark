@@ -198,6 +198,7 @@ unsafe extern "C" {
     ) -> u64;
     pub fn g_object_unref(object: gpointer);
     pub fn g_object_ref(object: gpointer) -> gpointer;
+    pub fn g_object_ref_sink(object: gpointer) -> gpointer;
 }
 
 #[link(name = "glib-2.0")]
