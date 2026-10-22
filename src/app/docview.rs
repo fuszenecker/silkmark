@@ -267,7 +267,7 @@ impl App {
         let text = gtk_editable_get_text(self.entry as *mut GtkEditable);
         let typed = if text.is_null() { String::new() } else { CStr::from_ptr(text).to_string_lossy().into_owned() };
         // An address that differs from the page's URL is being edited: leave it alone.
-        if typed == self.tabs[idx].url || typed.is_empty() {
+        if typed == md::display_url(&self.tabs[idx].url) || typed.is_empty() {
             gtk_widget_grab_focus(self.tabs[idx].doc_view);
         }
     }

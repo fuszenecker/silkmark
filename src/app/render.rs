@@ -9,6 +9,7 @@ impl App {
         let page = self.tabs[idx].page;
         self.clear_animations_for_page(page);
         set_label(self.tabs[idx].tab_label, &short(&self.tabs[idx].title, 24));
+        gtk_widget_set_tooltip_text(self.tabs[idx].tab_label, c(&self.tabs[idx].title).as_ptr());
 
         // A link/button inside the current document can still own keyboard focus
         // when navigation completes. Removing that focused subtree immediately can
@@ -44,7 +45,7 @@ impl App {
             );
         }
     }
-    /// A sidebar button: left-aligned, one line, ellipsized, full text in the tooltip.
+    /// A sidebar button: left-aligned, long titles wrap onto further lines instead of being cut.
     unsafe fn tree_button(&self, text: &str, tooltip: Option<&str>, class: &str, indent: i32) -> *mut GtkWidget {
         let btn = gtk_button_new_with_label(c(text).as_ptr());
         for name in class.split_whitespace() {
@@ -53,7 +54,8 @@ impl App {
         let label = gtk_button_get_child(btn as *mut GtkButton);
         if !label.is_null() {
             gtk_label_set_xalign(label as *mut GtkLabel, 0.0);
-            gtk_label_set_ellipsize(label as *mut GtkLabel, PANGO_ELLIPSIZE_END);
+            gtk_label_set_wrap(label as *mut GtkLabel, 1);
+            gtk_label_set_wrap_mode(label as *mut GtkLabel, PANGO_WRAP_WORD_CHAR);
             gtk_widget_set_hexpand(label, 1);
             gtk_widget_set_halign(label, GTK_ALIGN_START);
         }

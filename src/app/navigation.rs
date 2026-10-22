@@ -308,7 +308,7 @@ impl App {
         self.tabs[tab].url = url.clone();
         self.tabs[tab].status = "Loading...".into();
         if tab == self.active {
-            set_entry(self.entry, &url);
+            set_entry(self.entry, &md::display_url(&url));
             self.refresh_status();
         }
         let (tx, rx) = mpsc::channel();

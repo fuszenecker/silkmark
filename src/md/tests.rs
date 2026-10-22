@@ -699,4 +699,14 @@ mod commonmark_v1_release_tests {
         assert_eq!(hits, [1, 0, 3]);
         assert_eq!(count_hits("anything", "", false), 0);
     }
+
+    #[test]
+    fn display_url_decodes_only_text_not_syntax() {
+        assert_eq!(display_url("file:///a/Olivelle%20%E2%80%94%20Early.md"), "file:///a/Olivelle — Early.md");
+        assert_eq!(display_url("https://x.org/a%2Fb%3Fc%23d"), "https://x.org/a%2Fb%3Fc%23d");
+        assert_eq!(display_url("https://x.org/p.md#els%C5%91_l%C3%A9p"), "https://x.org/p.md#első_lép");
+        // An invalid UTF-8 run is left alone, as is a truncated escape.
+        assert_eq!(display_url("a%E2%80b"), "a%E2%80b");
+        assert_eq!(display_url("100%"), "100%");
+    }
 }

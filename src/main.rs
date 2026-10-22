@@ -632,7 +632,7 @@ unsafe fn install_embedded_css() {
         .tree-heading-button:hover { background: alpha(@theme_selected_bg_color, 0.10); }
         .tree-empty { opacity: 0.58; font-size: 9pt; margin: 0 8px 4px 8px; }
         .sidebar { background: alpha(@theme_fg_color, 0.035); }
-        .tree-link { padding: 5px 8px; border: none; box-shadow: none; background: transparent; }
+        .tree-link { padding: 4px 8px; border: none; box-shadow: none; background: transparent; }
         .tree-link:hover { background: alpha(@theme_selected_bg_color, 0.14); }
         .tree-top { font-weight: 700; }
         .tree-current { background: alpha(@theme_selected_bg_color, 0.22); }

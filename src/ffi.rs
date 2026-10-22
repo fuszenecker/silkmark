@@ -69,7 +69,7 @@ pub const GTK_ORIENTATION_HORIZONTAL: c_int = 0;
 pub const GTK_ORIENTATION_VERTICAL: c_int = 1;
 pub const GTK_PHASE_CAPTURE: c_int = 1;
 pub const GTK_ALIGN_START: c_int = 1;
-pub const PANGO_ELLIPSIZE_END: c_int = 3;
+pub const PANGO_WRAP_WORD_CHAR: c_int = 2;
 pub const GTK_POLICY_AUTOMATIC: c_int = 1;
 pub const GTK_POLICY_NEVER: c_int = 2;
 pub const GTK_STYLE_PROVIDER_PRIORITY_APPLICATION: c_uint = 600;
@@ -242,7 +242,7 @@ unsafe extern "C" {
     pub fn gtk_list_item_get_position(item: *mut GtkListItem) -> guint;
     pub fn gtk_list_item_set_activatable(item: *mut GtkListItem, activatable: gboolean);
     pub fn gtk_button_get_child(button: *mut GtkButton) -> *mut GtkWidget;
-    pub fn gtk_label_set_ellipsize(label: *mut GtkLabel, mode: c_int);
+    pub fn gtk_label_set_wrap_mode(label: *mut GtkLabel, mode: c_int);
     pub fn gtk_widget_set_halign(widget: *mut GtkWidget, align: c_int);
     pub fn gtk_list_item_set_selectable(item: *mut GtkListItem, selectable: gboolean);
     pub fn gtk_widget_pick(widget: *mut GtkWidget, x: c_double, y: c_double, flags: c_int) -> *mut GtkWidget;

@@ -7,10 +7,11 @@
 - find no longer re-renders the document: hits are counted from a precomputed text index and only visible rows are rebuilt
 - same-document fragment links just scroll; section jumps and restored positions now scroll reliably in long documents
 - store the session reading position as block index plus fraction; older pixel offsets are ignored
-- sidebar: left-aligned tree with indentation, one-line ellipsized titles (full text in the tooltip), highlight of the current section, no horizontal scrollbar, up to 1000 headings (was 200 and truncated at 34 characters)
+- sidebar: left-aligned tree with indentation, long titles wrap onto further lines instead of being cut, highlight of the current section, no horizontal scrollbar, up to 1000 headings (was 200 and truncated at 34 characters)
 - sidebar no longer jumps to its top when it is rebuilt or when a contents entry is clicked
 - tab titles use the document's first heading, else the decoded file name (no more `%20%E2%80%94`); bookmark titles are decoded too
 - the focus leaves the address bar once a page has loaded, so Page Down and the arrow keys scroll the page; Space/Shift+Space page, j/k scroll by a line (the key handler now runs in the capture phase)
+- the address bar shows spaces and non-ASCII characters decoded (`Olivelle — The Early…`); other escapes stay encoded; tab titles get a tooltip with the full title
 - add `docs/proposals-book-reading.md` with proposals for book-length documents
 
 ## 1.0.5

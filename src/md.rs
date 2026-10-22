@@ -988,6 +988,40 @@ pub fn percent_decode_fragment(s: &str) -> String {
     String::from_utf8_lossy(&out).into_owned()
 }
 
+/// The URL as shown in the address bar: spaces and non-ASCII characters are decoded so
+/// `Patrick%20Olivelle%20%E2%80%94` reads as text. Every other escape stays encoded,
+/// because decoding `%2F` or `%3F` would change what the URL means.
+pub fn display_url(url: &str) -> String {
+    let bytes = url.as_bytes();
+    let mut out = String::with_capacity(url.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        let mut run = Vec::new();
+        let mut j = i;
+        while j + 2 < bytes.len() && bytes[j] == b'%' {
+            match (hex(bytes[j + 1]), hex(bytes[j + 2])) {
+                (Some(a), Some(b)) if ((a << 4) | b) == 0x20 || ((a << 4) | b) >= 0x80 => {
+                    run.push((a << 4) | b);
+                    j += 3;
+                }
+                _ => break,
+            }
+        }
+        match std::str::from_utf8(&run) {
+            Ok(text) if j > i => {
+                out.push_str(text);
+                i = j;
+            }
+            _ => {
+                let ch = url[i..].chars().next().unwrap_or('%');
+                out.push(ch);
+                i += ch.len_utf8();
+            }
+        }
+    }
+    out
+}
+
 fn hex(b: u8) -> Option<u8> {
     match b {
         b'0'..=b'9' => Some(b - b'0'),

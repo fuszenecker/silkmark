@@ -146,7 +146,7 @@ impl App {
         if self.active >= self.tabs.len() {
             return;
         }
-        set_entry(self.entry, &self.tabs[self.active].url);
+        set_entry(self.entry, &md::display_url(&self.tabs[self.active].url));
         let title = format!("{} - SilkMark v{}", self.tabs[self.active].title, env!("CARGO_PKG_VERSION"));
         gtk_window_set_title(self.window as *mut GtkWindow, c(&title).as_ptr());
         set_entry(self.find_entry, &self.tabs[self.active].search);
