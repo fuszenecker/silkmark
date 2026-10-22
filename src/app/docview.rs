@@ -173,6 +173,8 @@ const JUMP_MAX_TICKS: u32 = 100;
 const DOC_TOP_MARGIN: i32 = 28;
 const DOC_BOTTOM_MARGIN: i32 = 40;
 const INDENT_PX: i32 = 22;
+/// Tables whose narrowest layout is at most this wide wrap instead of scrolling sideways.
+const TABLE_NO_SCROLL_MAX_WIDTH: i32 = 480;
 
 unsafe extern "C" fn on_row_setup(_factory: *mut c_void, item: *mut GtkListItem, _data: *mut c_void) {
     gtk_list_item_set_activatable(item, 0);
@@ -554,6 +556,14 @@ impl App {
             }
         }
         gtk_scrolled_window_set_child(sc as *mut GtkScrolledWindow, grid);
+        // A horizontally scrollable window asks its child for the height at the child's narrowest
+        // width, far taller than the table needs, and the rest shows as a grey gap below the
+        // last row. A table that fits when its cells wrap does not need to scroll sideways.
+        let (mut narrowest, mut natural) = (0, 0);
+        gtk_widget_measure(grid, GTK_ORIENTATION_HORIZONTAL, -1, &mut narrowest, &mut natural, ptr::null_mut(), ptr::null_mut());
+        if narrowest <= TABLE_NO_SCROLL_MAX_WIDTH {
+            gtk_scrolled_window_set_policy(sc as *mut GtkScrolledWindow, GTK_POLICY_NEVER, GTK_POLICY_NEVER);
+        }
         sc
     }
 

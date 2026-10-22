@@ -247,6 +247,15 @@ unsafe extern "C" {
     pub fn gtk_widget_set_halign(widget: *mut GtkWidget, align: c_int);
     pub fn gtk_list_item_set_selectable(item: *mut GtkListItem, selectable: gboolean);
     pub fn gtk_widget_pick(widget: *mut GtkWidget, x: c_double, y: c_double, flags: c_int) -> *mut GtkWidget;
+    pub fn gtk_widget_measure(
+        widget: *mut GtkWidget,
+        orientation: c_int,
+        for_size: c_int,
+        minimum: *mut c_int,
+        natural: *mut c_int,
+        minimum_baseline: *mut c_int,
+        natural_baseline: *mut c_int,
+    );
     pub fn gtk_widget_compute_point(
         widget: *mut GtkWidget,
         target: *mut GtkWidget,
